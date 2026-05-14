@@ -1,0 +1,241 @@
+import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS } from '@/constants/questions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY_QUIZ = '@respondeirmao:quiz_questions';
+const STORAGE_KEY_COMPARTILHAR = '@respondeirmao:compartilhar_questions';
+
+const SPREADSHEET_PUBHTML_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pubhtml';
+const SPREADSHEET_CSV_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pub';
+
+interface SheetItem {
+  name: string;
+  gid: string;
+}
+
+/**
+ * Robust CSV parser that handles multiple columns, quoted values, and multi-line strings.
+ * Returns an array of rows, where each row is an array of strings (columns).
+ */
+export function parseCsvRows(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentCell = '';
+  let currentRow: string[] = [];
+  let inQuotes = false;
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped double quote inside quote marks
+        currentCell += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // End of cell
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      // Real end of line
+      currentRow.push(currentCell.trim());
+
+      // Only push non-empty rows
+      if (currentRow.some(cell => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+
+      currentRow = [];
+      currentCell = '';
+
+      if (char === '\r' && nextChar === '\n') {
+        i++; // Skip trailing LF for CRLF line endings
+      }
+    } else {
+      currentCell += char;
+    }
+  }
+
+  // Handle residual data at EOF
+  if (currentCell || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(cell => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+
+/**
+ * Normalizes a sheet name into our level ID keys.
+ * E.g., "Compartilhamento - Comunhao" -> "comunhao"
+ * E.g., "Quiz - Multidão" -> "multidao"
+ */
+function normalizeLevelKey(name: string): string {
+  return name
+    .replace(/^Compartilhamento\s*-\s*/i, '')
+    .replace(/^Quiz\s*-\s*/i, '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .trim();
+}
+
+/**
+ * Extracts the array of sheets from Google's published HTML JavaScript init function.
+ * Using RegExp to match `items.push({name: "NAME", ..., gid: "GID", ...})` pattern.
+ */
+function extractSheetItems(html: string): SheetItem[] {
+  const items: SheetItem[] = [];
+
+  // Pattern search: items.push({name: "...", pageUrl: "...", gid: "...", ...})
+  // Or matching name and gid properties
+  const regex = /items\.push\(\s*\{\s*name:\s*"([^"]+)",[^}]*gid:\s*"([^"]+)"/gi;
+  let match;
+
+  while ((match = regex.exec(html)) !== null) {
+    items.push({
+      name: match[1],
+      gid: match[2]
+    });
+  }
+
+  return items;
+}
+
+export interface CachedQuestions {
+  quiz: Record<string, Question[]>;
+  compartilhar: Record<string, Question[]>;
+}
+
+export const questionsService = {
+  /**
+   * Loads stored questions from local cache or falls back to hardcoded defaults.
+   */
+  async loadLocalQuestions(): Promise<CachedQuestions> {
+    try {
+      const [quizJson, compartilharJson] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY_QUIZ),
+        AsyncStorage.getItem(STORAGE_KEY_COMPARTILHAR)
+      ]);
+
+      const quiz = quizJson ? JSON.parse(quizJson) : QUIZ_QUESTIONS;
+      const compartilhar = compartilharJson ? JSON.parse(compartilharJson) : COMPARTILHAR_QUESTIONS;
+
+      return { quiz, compartilhar };
+    } catch (error) {
+      console.error('[QuestionsService] Failed to read local cache:', error);
+      return {
+        quiz: QUIZ_QUESTIONS,
+        compartilhar: COMPARTILHAR_QUESTIONS
+      };
+    }
+  },
+
+  /**
+   * Connects to Google Sheets, downloads all matching sheets and stores them safely.
+   * Returns the new fully mapped question sets if successful.
+   * Rejects if syncing failed, adhering to "não substitua a memória atual" policy.
+   */
+  async fetchAndSyncQuestions(): Promise<CachedQuestions> {
+    // console.log('[QuestionsService] Starting background sync from Google Sheets...');
+
+    const response = await fetch(SPREADSHEET_PUBHTML_URL, {
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch spreadsheet pubhtml, status: ${response.status}`);
+    }
+
+    const html = await response.text();
+    const sheetItems = extractSheetItems(html);
+
+    if (sheetItems.length === 0) {
+      throw new Error('No sheets found in the spreadsheet HTML payload.');
+    }
+
+    const newQuiz: Record<string, Question[]> = { ...QUIZ_QUESTIONS };
+    const newCompartilhar: Record<string, Question[]> = { ...COMPARTILHAR_QUESTIONS };
+
+    let hasUpdates = false;
+    // Process each matched sheet
+    for (const item of sheetItems) {
+      const isCompartilhar = item.name.startsWith('Compartilhamento - ');
+      const isQuiz = item.name.startsWith('Quiz - ');
+
+      if (!isCompartilhar && !isQuiz) {
+        continue; // Ignore sheets we don't use
+      }
+
+      const levelKey = normalizeLevelKey(item.name);
+      const csvUrl = `${SPREADSHEET_CSV_BASE_URL}?output=csv&gid=${item.gid}`;
+
+      // console.log(`[QuestionsService] Fetching CSV for ${item.name} (gid: ${item.gid})`);
+
+      const csvResponse = await fetch(csvUrl, { headers: { 'Cache-Control': 'no-cache' } });
+      if (!csvResponse.ok) {
+        console.warn(`[QuestionsService] Failed downloading sheet: ${item.name}`);
+        continue; // Skip this specific sheet but could proceed or fail entirely? 
+        // Actually, the safest is to keep original data for this sheet if failed.
+      }
+      // console.log('csvText 1', csvResponse)
+
+      const csvText = await csvResponse.text();
+
+      const parsedRows = parseCsvRows(csvText);
+      // console.log(`[QuestionsService] Parsed ${parsedRows.length} rows for ${item.name}`);
+
+      // Skip updating if the sheet exists but is empty
+      if (parsedRows.length === 0) {
+        // console.log(`[QuestionsService] Sheet ${item.name} is currently empty. Skipping override.`);
+        continue;
+      }
+
+      // Map rows into Question model format
+      const mappedQuestions: Question[] = parsedRows.map((row, index) => {
+        if (isQuiz) {
+          // Quiz: A=Question, B=Separator, C=Answer
+          return {
+            id: `remote_${levelKey}_${index}`,
+            text: row[0] || '',
+            correctAnswer: row[2] || '',
+            level: levelKey,
+          };
+        } else {
+          // Compartilhamento: A=Question
+          return {
+            id: `remote_${levelKey}_${index}`,
+            text: row[0] || '',
+            level: levelKey,
+          };
+        }
+      });
+
+      if (isQuiz) {
+        newQuiz[levelKey] = mappedQuestions;
+      } else {
+        newCompartilhar[levelKey] = mappedQuestions;
+      }
+      hasUpdates = true;
+    }
+
+    if (!hasUpdates) {
+      throw new Error('Sync execution found no updateable question contents.');
+    }
+
+    // Succeeded with at least some updates! Persist them
+    // console.log('[QuestionsService] Sync successful, storing cache to device...');
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEY_QUIZ, JSON.stringify(newQuiz)),
+      AsyncStorage.setItem(STORAGE_KEY_COMPARTILHAR, JSON.stringify(newCompartilhar))
+    ]);
+
+    return { quiz: newQuiz, compartilhar: newCompartilhar };
+  }
+};
