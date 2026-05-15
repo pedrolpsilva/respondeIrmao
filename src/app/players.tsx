@@ -77,7 +77,7 @@ export default function PlayersScreen() {
                 }}
                 hasError={inputError}
                 onSubmitEditing={handleAdd}
-                returnKeyType="done"
+                returnKeyType="next"
               />
             </View>
             <View style={styles.buttonWrapper}>

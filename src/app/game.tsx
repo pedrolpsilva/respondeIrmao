@@ -4,9 +4,11 @@ import QuestionCard from '@/components/ui/QuestionCard';
 import { Question } from '@/constants/questions';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { playSoundPreset } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
-import { Check, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Medal, X, Volume2, VolumeX } from 'lucide-react-native';
+import { Pressable } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function GameScreen() {
@@ -31,10 +33,16 @@ export default function GameScreen() {
   const [timeRemaining, setTimeRemaining] = useState(config.timerBase);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
   // Animated refs
   const timerProgress = useRef(new Animated.Value(1)).current;
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const soundEnabledRef = useRef(isSoundEnabled);
+
+  useEffect(() => {
+    soundEnabledRef.current = isSoundEnabled;
+  }, [isSoundEnabled]);
 
   const currentPlayer = players[currentPlayerIndex];
 
@@ -54,10 +62,6 @@ export default function GameScreen() {
       return quizQuestions[level] || [];
     }
 
-    // Modo Compartilhar:
-    // Comunhão: Somente Comunhão
-    // Testemunho: Comunhão + Testemunho
-    // Confissão: Comunhão + Testemunho + Confissão
     const c = compartilharQuestions['comunhao'] || [];
     const t = compartilharQuestions['testemunho'] || [];
     const f = compartilharQuestions['confissao'] || [];
@@ -135,9 +139,14 @@ export default function GameScreen() {
 
       timerIntervalRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
+          if (prev == 11) {
+            if (soundEnabledRef.current) playSoundPreset('tenSeconds');
+          }
           if (prev <= 1) {
             clearInterval(timerIntervalRef.current!);
             setIsTimeUp(true);
+
+            if (soundEnabledRef.current) playSoundPreset('timeOut');
             return 0;
           }
           return prev - 1;
@@ -202,20 +211,23 @@ export default function GameScreen() {
       <View style={styles.scoreboardContainer}>
         <Text style={styles.scoreboardLabel}>PLACAR ATUAL</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
-          {players.map((p, i) => {
-            const isActive = i === currentPlayerIndex;
-            return (
-              <View key={p.id} style={[
-                styles.playerCard,
-                isActive && { backgroundColor: '#BEF264' } // Light green for active/top
-              ]}>
-                <View style={styles.playerCardContent}>
-                  <Text style={styles.playerName}>{p.name}</Text>
-                  <Text style={styles.playerPoints}>{p.points}</Text>
+          {[...players]
+            .sort((a, b) => b.points - a.points)
+            .map((p, i) => {
+              const isActive = p.id === currentPlayer?.id;
+              return (
+                <View key={p.id} style={[
+                  styles.playerCard,
+                  // isActive && { backgroundColor: '#BEF264' }
+                ]}>
+                  <View style={styles.playerCardContent}>
+                    {i <= 2 && (<Medal color={i == 0 ? '#F5B300' : i == 1 ? '#999999' : '#CD7F32'} />)}
+                    <Text style={styles.playerName}>{p.name}</Text>
+                    <Text style={styles.playerPoints}>{p.points}</Text>
+                  </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
         </ScrollView>
       </View>
     );
@@ -226,7 +238,24 @@ export default function GameScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        <BrutalHeader showBack={false} backRoute title="PARTIDA" transparent={true} />
+        <BrutalHeader
+          showBack={false}
+          backRoute
+          title="PARTIDA"
+          transparent={true}
+          rightComponent={
+            <Pressable
+              onPress={() => setIsSoundEnabled(!isSoundEnabled)}
+              style={styles.soundButton}
+            >
+              {isSoundEnabled ? (
+                <Volume2 color={Colors.text} size={24} />
+              ) : (
+                <VolumeX color={Colors.muted} size={24} />
+              )}
+            </Pressable>
+          }
+        />
 
         {/* Scoreboard Area */}
         {gameMode === 'quiz' && renderScoreboard()}
@@ -275,7 +304,7 @@ export default function GameScreen() {
               <View style={styles.halfAction}>
                 <BrutalButton variant="surface" size="large" onPress={handleWrong}>
                   <X size={24} color={Colors.accent2} style={{ marginRight: 8 }} />
-                  <Text style={styles.buttonLabel}>Errou</Text>
+                  <Text style={styles.buttonLabel}>{!isTimeUp ? 'Errou' : 'Próximo'}</Text>
                 </BrutalButton>
               </View>
               {!isTimeUp && (
@@ -419,5 +448,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.subheading,
     fontSize: 18,
     color: Colors.text,
+  },
+  soundButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

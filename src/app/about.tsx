@@ -1,8 +1,8 @@
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
+import * as Application from 'expo-application';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import pkg from '../../package.json';
 
 export default function AboutScreen() {
   return (
@@ -25,10 +25,13 @@ export default function AboutScreen() {
           <View style={styles.cardHighlight}>
             <Text style={styles.highlightTitle}>Detalhes</Text>
             <Text style={styles.highlightText}>
-              Versão do jogo: {pkg.version}
+              Versão do jogo: {Application.nativeApplicationVersion}
             </Text>
             <Text style={styles.bodyText}>
-              Desenvolvido por: {pkg.author.name} - {pkg.author.email}
+              Desenvolvido por: Pedro Luiz PS
+            </Text>
+            <Text style={styles.bodyText}>
+              Contato: PEDRO.LPO.OFICIAL@GMAIL.COM
             </Text>
           </View>
         </ScrollView>
