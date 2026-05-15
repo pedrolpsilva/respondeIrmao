@@ -10,9 +10,10 @@ interface BrutalHeaderProps {
   showBack?: boolean;
   backRoute?: boolean;
   transparent?: boolean;
+  rightComponent?: React.ReactNode;
 }
 
-export default function BrutalHeader({ title, showBack = true, backRoute, transparent = false }: BrutalHeaderProps) {
+export default function BrutalHeader({ title, showBack = true, backRoute, transparent = false, rightComponent }: BrutalHeaderProps) {
   const router = useRouter();
   const { showAlert } = useModal();
 
@@ -31,28 +32,32 @@ export default function BrutalHeader({ title, showBack = true, backRoute, transp
           </Pressable>
         )}
         <Text style={[styles.title, transparent && styles.titleTransparent]} numberOfLines={1}>{title}</Text>
-        {backRoute &&
-          <Pressable onPress={() => {
-            showAlert({
-              title: 'Sair da Partida',
-              message: 'Deseja realmente voltar ao menu e reiniciar?',
-              confirmText: 'Sim, Sair',
-              cancelText: 'Não',
-              variant: 'danger',
-              onConfirm: () => router.replace('/'),
-            });
-          }} style={styles.finish}>
-            <Text style={[
-              styles.buttonText,
-              {
-                color: '#FFFFFF',
-                fontSize: 14,
-              },
-            ]}>
-              Encerrar
-            </Text>
-          </Pressable>
-        }
+        
+        <View style={styles.rightSide}>
+          {rightComponent}
+          {backRoute &&
+            <Pressable onPress={() => {
+              showAlert({
+                title: 'Sair da Partida',
+                message: 'Deseja realmente voltar ao menu e reiniciar?',
+                confirmText: 'Sim, Sair',
+                cancelText: 'Não',
+                variant: 'danger',
+                onConfirm: () => router.replace('/'),
+              });
+            }} style={styles.finish}>
+              <Text style={[
+                styles.buttonText,
+                {
+                  color: '#FFFFFF',
+                  fontSize: 14,
+                },
+              ]}>
+                Encerrar
+              </Text>
+            </Pressable>
+          }
+        </View>
       </View>
     </View>
   );
@@ -135,5 +140,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.subheading,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  rightSide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
 });

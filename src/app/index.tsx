@@ -1,16 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useGame, GameMode } from '@/hooks/useGameContext';
-import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
 import BrutalButton from '@/components/ui/BrutalButton';
-import BrutalModal from '@/components/ui/BrutalModal';
 import BrutalInput from '@/components/ui/BrutalInput';
+import BrutalModal from '@/components/ui/BrutalModal';
+import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
+import { GameMode, useGame } from '@/hooks/useGameContext';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { setGameMode, resetGame } = useGame();
-  
+
+  const [warn, setWarn] = React.useState<null | string>();
   const [feedbackVisible, setFeedbackVisible] = React.useState(false);
   const [feedbackName, setFeedbackName] = React.useState('');
   const [feedbackComment, setFeedbackComment] = React.useState('');
@@ -21,12 +22,87 @@ export default function HomeScreen() {
     router.push('/players');
   };
 
-  const handleSendFeedback = () => {
-    // Here you would typically send the feedback to a backend or service
-    console.log('Feedback sent:', { name: feedbackName, comment: feedbackComment });
-    setFeedbackVisible(false);
-    setFeedbackName('');
-    setFeedbackComment('');
+  const handleSendFeedback = async () => {
+    if (!feedbackComment.trim()) {
+      setWarn('Preencha o campo de feedback.');
+      return;
+    }
+
+    try {
+      const serviceId = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID;
+      const templateId = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
+      const publicKey = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
+
+      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          service_id: serviceId,
+          template_id: templateId,
+          user_id: publicKey,
+          template_params: {
+            name: feedbackName.trim() || 'Irmão Anônimo',
+            feedback: feedbackComment,
+          },
+        }),
+      })
+        .then((response) => {
+          if (response.ok) {
+            setWarn('Obrigado pelo seu feedback! Ele é muito importante para mim.');
+            setFeedbackVisible(false);
+            setFeedbackName('');
+            setFeedbackComment('');
+          } else {
+            setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+          }
+        })
+        .catch((error) => {
+          console.error('Erro ao enviar feedback:', error);
+          setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+        });
+    } catch (error) {
+      console.error('Erro ao enviar feedback:', error);
+      setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+    }
+  };
+
+  const sortSubtittle = () => {
+    const subtittles = [
+      'Um pouco de comunhão prática!',
+      'Vivendo com seu irmão em Cristo.',
+      'Você realmente conhece esse(a) abençoado(a) do teu lado?',
+      'Um jogo para aproximar os crentes!',
+      'Teste seus conhecimentos bíblicos!',
+      'Já leu a Bíblia hoje?',
+      'Dica: Aprenda mais sobre seu irmão em Cristo.',
+      'Dica: Aprenda a ouvir mais!',
+      'O jogo que vai testar sua fé e seu conhecimento!',
+      'O que você não sabe sobre seu irmão em Cristo?',
+      'Já orou hoje?',
+      'Abençoa esse irmão que está ao teu lado!',
+      'Não é só um jogo, é voltar a comunhão!',
+    ];
+    return subtittles[Math.floor(Math.random() * subtittles.length)];
+  };
+
+  const sortRotation = () => {
+    const rotations = [
+      '-6deg',
+      '-5deg',
+      '-4deg',
+      '-3deg',
+      '-2deg',
+      '-1deg',
+      '1deg',
+      '2deg',
+      '3deg',
+      '4deg',
+      '5deg',
+      '6deg',
+    ];
+    return rotations[Math.floor(Math.random() * rotations.length)];
   };
 
   return (
@@ -37,6 +113,8 @@ export default function HomeScreen() {
           <Text style={styles.logoTextTop}>RESPONDE,</Text>
           <Text style={styles.logoTextBottom}>IRMÃO!</Text>
         </View>
+
+        <Text style={[styles.subtittle, { transform: [{ rotate: sortRotation() }] }]}>{sortSubtittle()}</Text>
 
         {/* Primary Play Actions */}
         <View style={styles.mainActions}>
@@ -92,6 +170,18 @@ export default function HomeScreen() {
           </BrutalButton>
         </View>
 
+        {warn != null && (
+          <BrutalModal
+            visible={feedbackVisible}
+            title="Aviso"
+            cancelText="Ok"
+            onCancel={() => setWarn(null)}
+          >
+            <Text style={styles.feedbackLabel}>
+              {warn}
+            </Text>
+          </BrutalModal>
+        )}
         {/* Feedback Modal */}
         <BrutalModal
           visible={feedbackVisible}
@@ -105,14 +195,14 @@ export default function HomeScreen() {
             <Text style={styles.feedbackLabel}>
               O que está achado do jogo? Compartilhe comigo e me ajude a abençoar mais pessoas através do seu feedback!
             </Text>
-            
+
             <BrutalInput
-              placeholder="Nome"
+              placeholder="Nome (opcional)"
               value={feedbackName}
               onChangeText={setFeedbackName}
               containerStyle={styles.inputSpacing}
             />
-            
+
             <BrutalInput
               placeholder="Meu comentário..."
               value={feedbackComment}
@@ -200,5 +290,16 @@ const styles = StyleSheet.create({
     height: 100,
     textAlignVertical: 'top',
     paddingTop: 12,
+  },
+  subtittle: {
+    fontFamily: Fonts.body,
+    fontSize: 18,
+    color: Colors.text,
+    fontWeight: '700',
+    textAlign: 'center',
+    width: '80%',
+    alignSelf: 'center',
+    marginTop: 20,
+    // transform: [{ rotate: '-4deg' }],
   },
 });

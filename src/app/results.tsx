@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Trophy, RotateCcw, Home } from 'lucide-react-native';
-import { useGame } from '@/hooks/useGameContext';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
+import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { useGame } from '@/hooks/useGameContext';
+import { useRouter } from 'expo-router';
+import { Home, RotateCcw, Trophy } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function ResultsScreen() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function ResultsScreen() {
 
   const handleRestart = () => {
     resetGame();
-    router.replace('/game');
+    router.replace('/players');
   };
 
   const handleExit = () => {
@@ -35,7 +35,7 @@ export default function ResultsScreen() {
       <View style={styles.inner}>
         <BrutalHeader title="Partida Finalizada!" showBack={false} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          
+
           {/* Golden Winner Card */}
           <View style={styles.winnerCardContainer}>
             <View style={styles.winnerCardShadow} />
@@ -55,7 +55,7 @@ export default function ResultsScreen() {
           {runnersUp.length > 0 && (
             <View style={styles.rankingContainer}>
               <Text style={styles.rankingTitle}>CLASSIFICAÇÃO GERAL</Text>
-              
+
               {runnersUp.map((p, index) => (
                 <View key={p.id} style={styles.rankRow}>
                   <View style={styles.rankBadge}>
@@ -82,7 +82,7 @@ export default function ResultsScreen() {
               <Text style={styles.buttonTextWhite}>Jogar Novamente</Text>
             </View>
           </BrutalButton>
-          
+
           <BrutalButton variant="surface" style={{ marginTop: 12 }} onPress={handleExit}>
             <View style={styles.buttonRow}>
               <Home size={20} color={Colors.text} strokeWidth={2.5} style={{ marginRight: 8 }} />

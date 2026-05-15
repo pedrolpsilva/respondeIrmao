@@ -1,6 +1,6 @@
-import React from 'react';
-import { Modal, StyleSheet, Text, View, Pressable, Animated } from 'react-native';
 import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
+import React from 'react';
+import { Animated, Modal, StyleSheet, Text, View } from 'react-native';
 import BrutalButton from './BrutalButton';
 
 interface BrutalModalProps {
@@ -10,8 +10,8 @@ interface BrutalModalProps {
   children?: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onConfirm?: () => void;
+  onCancel?: () => void;
   variant?: 'primary' | 'danger';
   showCancel?: boolean;
 }
@@ -62,7 +62,7 @@ export default function BrutalModal({
       onRequestClose={onCancel}
     >
       <View style={styles.backdrop}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.container,
             {
@@ -73,16 +73,16 @@ export default function BrutalModal({
         >
           {/* Shadow Background */}
           <View style={styles.shadow} />
-          
+
           {/* Main Content */}
           <View style={styles.content}>
             <Text style={styles.title}>{title}</Text>
             {message && <Text style={styles.message}>{message}</Text>}
-            
+
             {children}
-            
+
             <View style={styles.footer}>
-              {showCancel && (
+              {onCancel &&
                 <>
                   <BrutalButton
                     variant="surface"
@@ -94,16 +94,18 @@ export default function BrutalModal({
                   </BrutalButton>
                   <View style={{ width: Spacing.two }} />
                 </>
-              )}
-              
-              <BrutalButton
-                variant={variant === 'danger' ? 'accent2' : 'primary'}
-                onPress={onConfirm}
-                style={styles.button}
-                size="medium"
-              >
-                {confirmText}
-              </BrutalButton>
+              }
+
+              {onConfirm &&
+                <BrutalButton
+                  variant={variant === 'danger' ? 'accent2' : 'primary'}
+                  onPress={onConfirm}
+                  style={styles.button}
+                  size="medium"
+                >
+                  {confirmText}
+                </BrutalButton>
+              }
             </View>
           </View>
         </Animated.View>
