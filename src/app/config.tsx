@@ -19,6 +19,7 @@ export default function ConfigScreen() {
   const [timer, setTimer] = useState(config.timerBase || 30);
   const [repeatSame, setRepeatSame] = useState(config.repeatSamePlayer || false);
   const [repeatOther, setRepeatOther] = useState(config.repeatOtherPlayers || false);
+  const [includeLower, setIncludeLower] = useState(config.includeLowerLevels ?? false);
 
   const handleSubmit = () => {
     updateConfig({
@@ -27,6 +28,7 @@ export default function ConfigScreen() {
       timerBase: timer,
       repeatSamePlayer: repeatSame,
       repeatOtherPlayers: repeatOther,
+      includeLowerLevels: includeLower,
     });
     resetGame();
     router.push('/game');
@@ -98,6 +100,23 @@ export default function ConfigScreen() {
                 </>
               )}
             </View>
+
+            {/* include lower levels switch */}
+            <View style={[styles.toggleCard, { marginTop: 12 }]}>
+              <View style={styles.toggleTextWrapper}>
+                <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
+                <Text style={styles.toggleSubtitle}>
+                  Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
+                </Text>
+              </View>
+              <Switch
+                trackColor={{ false: Colors.muted, true: Colors.primary }}
+                thumbColor={Colors.border}
+                ios_backgroundColor={Colors.muted}
+                onValueChange={setIncludeLower}
+                value={includeLower}
+              />
+            </View>
           </View>
 
           {gameMode === 'quiz' ? (
@@ -119,7 +138,7 @@ export default function ConfigScreen() {
                   <Pressable
                     onPress={() => {
                       Vibration.vibrate(10);
-                      setTimer(prev => Math.max(30, prev - 30));
+                      setTimer(prev => Math.max(15, prev - 15));
                     }}
                     style={styles.timerButton}
                   >
@@ -133,7 +152,7 @@ export default function ConfigScreen() {
                   <Pressable
                     onPress={() => {
                       Vibration.vibrate(10);
-                      setTimer(prev => Math.min(120, prev + 30));
+                      setTimer(prev => Math.min(120, prev + 15));
                     }}
                     style={styles.timerButton}
                   >
