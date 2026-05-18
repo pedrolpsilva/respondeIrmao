@@ -118,17 +118,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const handleAnswer = (isCorrect: boolean) => {
     if (!isCorrect) return; // "quando apertar em Errou não altere a pontuação"
 
-    setPlayers(prev => {
-      const updated = [...prev];
-      const player = updated[currentPlayerIndex];
-      if (!player) return prev;
-
-      updated[currentPlayerIndex] = {
-        ...player,
-        points: player.points + 1,
-      };
-      return updated;
-    });
+    setPlayers(prev =>
+      prev.map((player, index) =>
+        index === currentPlayerIndex
+          ? { ...player, points: player.points + 1 }
+          : player
+      )
+    );
   };
 
   const nextTurn = () => {
