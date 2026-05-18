@@ -163,14 +163,13 @@ export const questionsService = {
     const newQuiz: Record<string, Question[]> = { ...QUIZ_QUESTIONS };
     const newCompartilhar: Record<string, Question[]> = { ...COMPARTILHAR_QUESTIONS };
 
-    let hasUpdates = false;
-    // Process each matched sheet
-    for (const item of sheetItems) {
+    // Process all matched sheets concurrently
+    const sheetPromises = sheetItems.map(async (item) => {
       const isCompartilhar = item.name.startsWith('Compartilhamento - ');
       const isQuiz = item.name.startsWith('Quiz - ');
 
       if (!isCompartilhar && !isQuiz) {
-        continue; // Ignore sheets we don't use
+        return null; // Ignore sheets we don't use
       }
 
       const levelKey = normalizeLevelKey(item.name);
@@ -178,49 +177,63 @@ export const questionsService = {
 
       // console.log(`[QuestionsService] Fetching CSV for ${item.name} (gid: ${item.gid})`);
 
-      const csvResponse = await fetch(csvUrl, { headers: { 'Cache-Control': 'no-cache' } });
-      if (!csvResponse.ok) {
-        console.warn(`[QuestionsService] Failed downloading sheet: ${item.name}`);
-        continue; // Skip this specific sheet but could proceed or fail entirely? 
-        // Actually, the safest is to keep original data for this sheet if failed.
-      }
-      // console.log('csvText 1', csvResponse)
-
-      const csvText = await csvResponse.text();
-
-      const parsedRows = parseCsvRows(csvText);
-      // console.log(`[QuestionsService] Parsed ${parsedRows.length} rows for ${item.name}`);
-
-      // Skip updating if the sheet exists but is empty
-      if (parsedRows.length === 0) {
-        // console.log(`[QuestionsService] Sheet ${item.name} is currently empty. Skipping override.`);
-        continue;
-      }
-
-      // Map rows into Question model format
-      const mappedQuestions: Question[] = parsedRows.map((row, index) => {
-        if (isQuiz) {
-          // Quiz: A=Question, B=Separator, C=Answer
-          return {
-            id: `remote_${levelKey}_${index}`,
-            text: row[0] || '',
-            correctAnswer: row[2] || '',
-            level: levelKey,
-          };
-        } else {
-          // Compartilhamento: A=Question
-          return {
-            id: `remote_${levelKey}_${index}`,
-            text: row[0] || '',
-            level: levelKey,
-          };
+      try {
+        const csvResponse = await fetch(csvUrl, { headers: { 'Cache-Control': 'no-cache' } });
+        if (!csvResponse.ok) {
+          console.warn(`[QuestionsService] Failed downloading sheet: ${item.name}`);
+          return null; // Skip this specific sheet but could proceed or fail entirely?
+          // Actually, the safest is to keep original data for this sheet if failed.
         }
-      });
+        // console.log('csvText 1', csvResponse)
 
-      if (isQuiz) {
-        newQuiz[levelKey] = mappedQuestions;
+        const csvText = await csvResponse.text();
+
+        const parsedRows = parseCsvRows(csvText);
+        // console.log(`[QuestionsService] Parsed ${parsedRows.length} rows for ${item.name}`);
+
+        // Skip updating if the sheet exists but is empty
+        if (parsedRows.length === 0) {
+          // console.log(`[QuestionsService] Sheet ${item.name} is currently empty. Skipping override.`);
+          return null;
+        }
+
+        // Map rows into Question model format
+        const mappedQuestions: Question[] = parsedRows.map((row, index) => {
+          if (isQuiz) {
+            // Quiz: A=Question, B=Separator, C=Answer
+            return {
+              id: `remote_${levelKey}_${index}`,
+              text: row[0] || '',
+              correctAnswer: row[2] || '',
+              level: levelKey,
+            };
+          } else {
+            // Compartilhamento: A=Question
+            return {
+              id: `remote_${levelKey}_${index}`,
+              text: row[0] || '',
+              level: levelKey,
+            };
+          }
+        });
+
+        return { isQuiz, levelKey, mappedQuestions };
+      } catch (error) {
+        console.warn(`[QuestionsService] Error fetching sheet ${item.name}:`, error);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(sheetPromises);
+
+    let hasUpdates = false;
+    for (const result of results) {
+      if (!result) continue;
+
+      if (result.isQuiz) {
+        newQuiz[result.levelKey] = result.mappedQuestions;
       } else {
-        newCompartilhar[levelKey] = mappedQuestions;
+        newCompartilhar[result.levelKey] = result.mappedQuestions;
       }
       hasUpdates = true;
     }
