@@ -1,5 +1,6 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS } from '@/constants/questions';
 import { questionsService } from '@/services/questionsService';
+import * as Crypto from 'expo-crypto';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export type GameMode = 'quiz' | 'compartilhar';
@@ -102,7 +103,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (players.some(p => p.name.toLowerCase() === normalized.toLowerCase())) return false;
 
     const newPlayer: Player = {
-      id: Date.now().toString() + Math.random().toString(36).substring(2, 7),
+      id: Crypto.randomUUID(),
       name: normalized,
       points: 0,
     };

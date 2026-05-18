@@ -3985,6 +3985,11 @@ expo-constants@~55.0.16:
   dependencies:
     "@expo/env" "~2.1.2"
 
+expo-crypto@^55.0.15:
+  version "55.0.15"
+  resolved "https://registry.yarnpkg.com/expo-crypto/-/expo-crypto-55.0.15.tgz#77ad63c227282013943df8f9037150c6731d827c"
+  integrity sha512-nlxLguQyJM4MhDDERL30WZkq68/BujOcAp4QdGk+1pZmUmG1p2M8cF7GeFwYvWwjH0DVsIRtRh4ukeTvOZVTPg==
+
 expo-dev-client@~55.0.34:
   version "55.0.34"
   resolved "https://registry.npmjs.org/expo-dev-client/-/expo-dev-client-55.0.34.tgz"
