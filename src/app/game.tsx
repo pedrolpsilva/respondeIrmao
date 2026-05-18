@@ -6,10 +6,9 @@ import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { playSoundPreset } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
-import { Check, Medal, X, Volume2, VolumeX } from 'lucide-react-native';
-import { Pressable } from 'react-native';
+import { Check, Medal, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function GameScreen() {
   const router = useRouter();
@@ -34,6 +33,7 @@ export default function GameScreen() {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [currentSound, setCurrentSound] = useState<any>(null);
 
   // Animated refs
   const timerProgress = useRef(new Animated.Value(1)).current;
@@ -48,30 +48,30 @@ export default function GameScreen() {
 
   // Load relevant pool
   const getQuestionPool = useCallback(() => {
-    const { level } = config;
+    const { level, includeLowerLevels } = config;
 
     if (gameMode === 'quiz') {
-      const m = quizQuestions['multidao'] || [];
-      const d = quizQuestions['discipulo'] || [];
-      const a = quizQuestions['apostolo'] || [];
+      const m = (quizQuestions['multidao'] || []).map(q => ({ ...q, level: q.level || 'multidao' }));
+      const d = (quizQuestions['discipulo'] || []).map(q => ({ ...q, level: q.level || 'discipulo' }));
+      const a = (quizQuestions['apostolo'] || []).map(q => ({ ...q, level: q.level || 'apostolo' }));
 
       if (level === 'multidao') return m;
-      if (level === 'discipulo') return [...m, ...d];
-      if (level === 'apostolo') return [...m, ...d, ...a];
+      if (level === 'discipulo') return includeLowerLevels ? [...m, ...d] : d;
+      if (level === 'apostolo') return includeLowerLevels ? [...m, ...d, ...a] : a;
 
-      return quizQuestions[level] || [];
+      return (quizQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
     }
 
-    const c = compartilharQuestions['comunhao'] || [];
-    const t = compartilharQuestions['testemunho'] || [];
-    const f = compartilharQuestions['confissao'] || [];
+    const c = (compartilharQuestions['comunhao'] || []).map(q => ({ ...q, level: q.level || 'comunhao' }));
+    const t = (compartilharQuestions['testemunho'] || []).map(q => ({ ...q, level: q.level || 'testemunho' }));
+    const f = (compartilharQuestions['confissao'] || []).map(q => ({ ...q, level: q.level || 'confissao' }));
 
     if (level === 'comunhao') return c;
-    if (level === 'testemunho') return [...c, ...t];
-    if (level === 'confissao') return [...c, ...t, ...f];
+    if (level === 'testemunho') return includeLowerLevels ? [...c, ...t] : t;
+    if (level === 'confissao') return includeLowerLevels ? [...c, ...t, ...f] : f;
 
-    return compartilharQuestions[level] || [];
-  }, [gameMode, config.level, quizQuestions, compartilharQuestions]);
+    return (compartilharQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
+  }, [gameMode, config.level, config.includeLowerLevels, quizQuestions, compartilharQuestions]);
 
   // Pull random new question
   const selectNextQuestion = useCallback((forceResetRepeated = false) => {
@@ -123,6 +123,16 @@ export default function GameScreen() {
     selectNextQuestion();
   }, []);
 
+  const handleCurrentSound = async () => {
+    const sound = await playSoundPreset('tenSeconds');
+    setCurrentSound(sound);
+  }
+
+  const stopCurrentSound = () => {
+    currentSound?.stopAsync();
+    currentSound?.unloadAsync();
+    setCurrentSound(null);
+  };
 
   const resetTimer = () => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -140,7 +150,7 @@ export default function GameScreen() {
       timerIntervalRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev == 11) {
-            if (soundEnabledRef.current) playSoundPreset('tenSeconds');
+            if (soundEnabledRef.current) handleCurrentSound()
           }
           if (prev <= 1) {
             clearInterval(timerIntervalRef.current!);
@@ -175,6 +185,8 @@ export default function GameScreen() {
   };
 
   const handleCorrect = () => {
+    stopCurrentSound()
+
     if (gameMode === 'quiz') {
       handleAnswer(true);
       setTimeout(() => {
@@ -193,17 +205,14 @@ export default function GameScreen() {
   };
 
   const handleWrong = () => {
+    stopCurrentSound()
+
     if (gameMode === 'quiz') {
       handleAnswer(false);
       setAnimTrigger('slide');
       selectNextQuestion();
       nextTurn();
     }
-  };
-
-  const handleSkip = () => {
-    setAnimTrigger('flip');
-    selectNextQuestion(true);
   };
 
   const sortedPlayers = useMemo(() => {
@@ -216,20 +225,20 @@ export default function GameScreen() {
         <Text style={styles.scoreboardLabel}>PLACAR ATUAL</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
           {sortedPlayers.map((p, i) => {
-              const isActive = p.id === currentPlayer?.id;
-              return (
-                <View key={p.id} style={[
-                  styles.playerCard,
-                  // isActive && { backgroundColor: '#BEF264' }
-                ]}>
-                  <View style={styles.playerCardContent}>
-                    {i <= 2 && (<Medal color={i == 0 ? '#F5B300' : i == 1 ? '#999999' : '#CD7F32'} />)}
-                    <Text style={styles.playerName}>{p.name}</Text>
-                    <Text style={styles.playerPoints}>{p.points}</Text>
-                  </View>
+            const isActive = p.id === currentPlayer?.id;
+            return (
+              <View key={p.id} style={[
+                styles.playerCard,
+                // isActive && { backgroundColor: '#BEF264' }
+              ]}>
+                <View style={styles.playerCardContent}>
+                  {i <= 2 && (<Medal color={i == 0 ? '#F5B300' : i == 1 ? '#999999' : '#CD7F32'} />)}
+                  <Text style={styles.playerName}>{p.name}</Text>
+                  <Text style={styles.playerPoints}>{p.points}</Text>
                 </View>
-              );
-            })}
+              </View>
+            );
+          })}
         </ScrollView>
       </View>
     );
@@ -288,7 +297,7 @@ export default function GameScreen() {
         {/* Question Card */}
         <QuestionCard
           question={currentQuestion}
-          levelLabel={showAnswer ? "RESPOSTA" : config.level}
+          levelLabel={currentQuestion.level || config.level}
           actionTrigger={animTrigger}
           showAnswerButton={gameMode === 'quiz'}
           timeUp={isTimeUp}

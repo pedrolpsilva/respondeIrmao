@@ -18,6 +18,7 @@ export interface GameConfig {
   timerBase: number; // seconds: 30, 60, 90, 120
   repeatSamePlayer: boolean;
   repeatOtherPlayers: boolean;
+  includeLowerLevels: boolean;
 }
 
 interface GameContextType {
@@ -49,6 +50,7 @@ const defaultGameConfig: GameConfig = {
   timerBase: 30,
   repeatSamePlayer: false,
   repeatOtherPlayers: false,
+  includeLowerLevels: false,
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);

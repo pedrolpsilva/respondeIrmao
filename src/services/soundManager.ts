@@ -5,6 +5,8 @@ const SOUND_PRESETS = {
     tenSeconds: require('../../assets/sounds/tenSeconds.mp3'),
 };
 
+let currentSoundInstance: Audio.Sound | null = null;
+
 export const playSoundPreset = async (presetName: 'timeOut' | 'tenSeconds') => {
     try {
         const soundModule = SOUND_PRESETS[presetName];
@@ -20,13 +22,19 @@ export const playSoundPreset = async (presetName: 'timeOut' | 'tenSeconds') => {
         });
         const { sound } = await Audio.Sound.createAsync(soundModule);
 
+        currentSoundInstance = sound;
         await sound.playAsync();
 
         sound.setOnPlaybackStatusUpdate((status) => {
             if (status.didJustFinish) {
                 sound.unloadAsync();
+                if (currentSoundInstance === sound) {
+                    currentSoundInstance = null;
+                }
             }
         });
+
+        return sound
     } catch (error) {
         console.error(`Erro ao tocar o preset ${presetName}:`, error);
     }

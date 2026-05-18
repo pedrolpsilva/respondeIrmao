@@ -15,6 +15,15 @@ interface QuestionCardProps {
   onToggleAnswer?: () => void;
 }
 
+const LEVEL_DISPLAY_NAMES: Record<string, string> = {
+  multidao: 'Multidão',
+  discipulo: 'Discípulo',
+  apostolo: 'Apóstolo',
+  comunhao: 'Comunhão',
+  testemunho: 'Testemunho',
+  confissao: 'Confissão',
+};
+
 export default function QuestionCard({
   question,
   levelLabel,
@@ -29,11 +38,21 @@ export default function QuestionCard({
 
   const questionText = timeUp ? "Tempo Esgotado!" : showAnswer ? question.correctAnswer : question.text;
 
+  const getInitialLevelLabel = () => {
+    const rawLevel = question.level || levelLabel || 'multidao';
+    const levelName = LEVEL_DISPLAY_NAMES[rawLevel.toLowerCase()] || rawLevel;
+    return showAnswer ? `${levelName} - Resposta` : levelName;
+  };
+
   const [displayedText, setDisplayedText] = useState(questionText || '');
-  const [displayedLevel, setDisplayedLevel] = useState(levelLabel);
+  const [displayedLevel, setDisplayedLevel] = useState(getInitialLevelLabel());
 
   useEffect(() => {
-    if (questionText === displayedText) return;
+    const rawLevel = question.level || levelLabel || 'multidao';
+    const levelName = LEVEL_DISPLAY_NAMES[rawLevel.toLowerCase()] || rawLevel;
+    const currentLevelLabel = showAnswer ? `${levelName} - Resposta` : levelName;
+
+    if (questionText === displayedText && currentLevelLabel === displayedLevel) return;
 
     if (actionTrigger === 'slide') {
       // Slide out to the left
@@ -43,7 +62,7 @@ export default function QuestionCard({
         useNativeDriver: true,
       }).start(() => {
         setDisplayedText(questionText || '');
-        setDisplayedLevel(levelLabel);
+        setDisplayedLevel(currentLevelLabel);
         // Instant teleport to the right
         slideAnim.setValue(Dimensions.get('window').width);
         // Slide back into center
@@ -62,7 +81,7 @@ export default function QuestionCard({
         useNativeDriver: true,
       }).start(() => {
         setDisplayedText(questionText || '');
-        setDisplayedLevel(levelLabel);
+        setDisplayedLevel(currentLevelLabel);
         // Return flip back
         Animated.timing(flipAnim, {
           toValue: 0,
@@ -73,9 +92,9 @@ export default function QuestionCard({
     } else {
       // Immediate update fallback
       setDisplayedText(questionText || '');
-      setDisplayedLevel(levelLabel);
+      setDisplayedLevel(currentLevelLabel);
     }
-  }, [questionText, levelLabel, actionTrigger]);
+  }, [questionText, question.level, levelLabel, showAnswer, actionTrigger]);
 
   const cardInterpolate = flipAnim.interpolate({
     inputRange: [0, 1],
