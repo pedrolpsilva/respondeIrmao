@@ -8,7 +8,7 @@ import { playSoundPreset } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
 import { Check, Medal, X, Volume2, VolumeX } from 'lucide-react-native';
 import { Pressable } from 'react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function GameScreen() {
@@ -206,14 +206,16 @@ export default function GameScreen() {
     selectNextQuestion(true);
   };
 
+  const sortedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => b.points - a.points);
+  }, [players]);
+
   const renderScoreboard = () => {
     return (
       <View style={styles.scoreboardContainer}>
         <Text style={styles.scoreboardLabel}>PLACAR ATUAL</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
-          {[...players]
-            .sort((a, b) => b.points - a.points)
-            .map((p, i) => {
+          {sortedPlayers.map((p, i) => {
               const isActive = p.id === currentPlayer?.id;
               return (
                 <View key={p.id} style={[
