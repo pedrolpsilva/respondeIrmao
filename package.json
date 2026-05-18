@@ -25,6 +25,7 @@
     "expo-application": "~55.0.15",
     "expo-av": "^16.0.8",
     "expo-constants": "~55.0.16",
+    "expo-crypto": "^55.0.15",
     "expo-dev-client": "~55.0.34",
     "expo-device": "~55.0.16",
     "expo-font": "~55.0.7",
@@ -51,6 +52,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~55.0.1",
     "typescript": "~5.9.2"
   },
   "private": true
