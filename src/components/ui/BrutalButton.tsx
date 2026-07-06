@@ -1,4 +1,5 @@
 import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { playClickSound } from '@/services/soundManager';
 import React, { useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, TextStyle, Vibration, View, ViewStyle } from 'react-native';
 
@@ -46,9 +47,12 @@ export default function BrutalButton({
   const handlePress = () => {
     if (disabled) return;
     Vibration.vibrate(10); // feedback tátil curto
+    playClickSound();
     onPress?.();
   };
 
+  const flatStyle = StyleSheet.flatten(style) || {};
+  const hasCustomHeight = flatStyle.height !== undefined || flatStyle.aspectRatio !== undefined;
   const containerHeight = size === 'small' ? 44 : size === 'large' ? Metrics.buttonHeight : 56;
   const containerPadding = size === 'small' ? 12 : 20;
 
@@ -76,7 +80,7 @@ export default function BrutalButton({
             backgroundColor: getBgColor(),
             borderColor: Colors.border,
             borderRadius: Metrics.radiusButton,
-            height: containerHeight,
+            height: hasCustomHeight ? '100%' : containerHeight,
             paddingHorizontal: containerPadding,
             transform: [
               { translateX: isPressed ? Metrics.shadowOffset : 0 },

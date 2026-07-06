@@ -12,26 +12,49 @@ export default function HelpScreen() {
 
           <View style={styles.section}>
             <View style={[styles.badge, { backgroundColor: Colors.primary }]}>
-              <Text style={styles.badgeText}>Modo Compartilhar</Text>
+              <Text style={styles.badgeText}>Compartilhar</Text>
             </View>
             <View style={styles.card}>
-              <Text style={styles.rule}>• Modo amigável voltado à comunhão.</Text>
-              <Text style={styles.rule}>• Não possui pontuação, vencedores ou tempo.</Text>
+              <Text style={styles.rule}>• Modo amigável voltado à comunhão e conhecimento mútuo.</Text>
+              <Text style={styles.rule}>• Não possui pontuação, vencedores ou tempo limite.</Text>
               <Text style={styles.rule}>• Responda à pergunta com liberdade e profundidade.</Text>
-              <Text style={styles.rule}>• Níveis: Comunhão (leve), Testemunho (médio), Confissão (profundo).</Text>
+              <Text style={styles.rule}>• Níveis: Comunhão (leve), Testemunho (médio) e Confissão (profundo).</Text>
             </View>
           </View>
 
           <View style={styles.section}>
             <View style={[styles.badge, { backgroundColor: Colors.accent1 }]}>
-              <Text style={styles.badgeText}>Modo Quiz</Text>
+              <Text style={styles.badgeText}>Quiz Bíblico</Text>
             </View>
             <View style={styles.card}>
-              <Text style={styles.rule}>• Modo competitivo sobre conhecimentos bíblicos.</Text>
-              <Text style={styles.rule}>• Acertos concedem 1 ponto.</Text>
-              <Text style={styles.rule}>• Acertar 3 seguidas ativa o status <Text style={styles.bold}>Ungido</Text> (+2 pontos por acerto).</Text>
-              <Text style={styles.rule}>• Atenção ao tempo, pontuação e demais regras configuradas!</Text>
-              <Text style={styles.rule}>• Níveis: Multidão (fácil), Discípulo (médio), Apóstolo (difícil).</Text>
+              <Text style={styles.rule}>• Modo competitivo para testar conhecimentos sobre a Bíblia.</Text>
+              <Text style={styles.rule}>• Cada acerto concede 1 ponto ao jogador da vez.</Text>
+              <Text style={styles.rule}>• O jogo termina quando um jogador alcança a pontuação alvo configurada.</Text>
+              <Text style={styles.rule}>• Níveis: Multidão (fácil), Discípulo (médio) e Apóstolo (difícil).</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={[styles.badge, { backgroundColor: Colors.accent2 }]}>
+              <Text style={styles.badgeText}>Quiz Teológico</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.rule}>• Modo focado no estudo e compreensão de termos teológicos essenciais.</Text>
+              <Text style={styles.rule}>• Cada resposta correta concede 1 ponto.</Text>
+              <Text style={styles.rule}>• Atenção: as respostas não precisam ser idênticas palavra por palavra, bastando que o jogador demonstre a compreensão do conceito.</Text>
+              <Text style={styles.rule}>• Excelente para aprender conceitos como Trindade, Graça, Aliança, entre outros.</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={[styles.badge, { backgroundColor: Colors.warning }]}>
+              <Text style={styles.badgeText}>Torre de Babel (Solo)</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.rule}>• Desafio solo extremo para testar seu conhecimento bíblico máximo.</Text>
+              <Text style={styles.rule}>• Tente subir os 100 níveis da torre respondendo a perguntas que aumentam de dificuldade.</Text>
+              <Text style={styles.rule}>• Cuidado: qualquer resposta errada resulta em queda imediata (Fim de Jogo)!</Text>
+              <Text style={styles.rule}>• Classificação das perguntas: 30 fáceis, 30 médias, 30 difíceis e 10 muito difíceis.</Text>
             </View>
           </View>
         </ScrollView>

@@ -4,7 +4,7 @@ import QuestionCard from '@/components/ui/QuestionCard';
 import { Question } from '@/constants/questions';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
-import { playSoundPreset } from '@/services/soundManager';
+import { playSoundPreset, stopAllSounds, playClickSound } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
 import { Check, Medal, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,6 +23,7 @@ export default function GameScreen() {
     nextTurn,
     quizQuestions,
     compartilharQuestions,
+    teologicoQuestions,
     setPlayers,
   } = useGame();
 
@@ -33,11 +34,10 @@ export default function GameScreen() {
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
-  const [currentSound, setCurrentSound] = useState<any>(null);
 
   // Animated refs
   const timerProgress = useRef(new Animated.Value(1)).current;
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<any>(null);
   const soundEnabledRef = useRef(isSoundEnabled);
 
   useEffect(() => {
@@ -49,6 +49,10 @@ export default function GameScreen() {
   // Load relevant pool
   const getQuestionPool = useCallback(() => {
     const { level, includeLowerLevels } = config;
+
+    if (gameMode === 'teologico') {
+      return (teologicoQuestions || []).map(q => ({ ...q, level: 'teologico' }));
+    }
 
     if (gameMode === 'quiz') {
       const m = (quizQuestions['multidao'] || []).map(q => ({ ...q, level: q.level || 'multidao' }));
@@ -71,7 +75,7 @@ export default function GameScreen() {
     if (level === 'confissao') return includeLowerLevels ? [...c, ...t, ...f] : f;
 
     return (compartilharQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
-  }, [gameMode, config.level, config.includeLowerLevels, quizQuestions, compartilharQuestions]);
+  }, [gameMode, config.level, config.includeLowerLevels, quizQuestions, compartilharQuestions, teologicoQuestions]);
 
   // Pull random new question
   const selectNextQuestion = useCallback((forceResetRepeated = false) => {
@@ -124,14 +128,11 @@ export default function GameScreen() {
   }, []);
 
   const handleCurrentSound = async () => {
-    const sound = await playSoundPreset('tenSeconds');
-    setCurrentSound(sound);
+    await playSoundPreset('tenSeconds');
   }
 
   const stopCurrentSound = () => {
-    currentSound?.stopAsync();
-    currentSound?.unloadAsync();
-    setCurrentSound(null);
+    stopAllSounds();
   };
 
   const resetTimer = () => {
@@ -140,7 +141,7 @@ export default function GameScreen() {
     setTimeRemaining(config.timerBase);
     timerProgress.setValue(1);
 
-    if (gameMode === 'quiz') {
+    if (gameMode === 'quiz' || gameMode === 'teologico') {
       Animated.timing(timerProgress, {
         toValue: 0,
         duration: config.timerBase * 1000,
@@ -172,6 +173,7 @@ export default function GameScreen() {
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      stopAllSounds();
     };
   }, []);
 
@@ -187,7 +189,7 @@ export default function GameScreen() {
   const handleCorrect = () => {
     stopCurrentSound()
 
-    if (gameMode === 'quiz') {
+    if (gameMode === 'quiz' || gameMode === 'teologico') {
       handleAnswer(true);
       setTimeout(() => {
         const isFinished = checkWinCondition();
@@ -207,7 +209,7 @@ export default function GameScreen() {
   const handleWrong = () => {
     stopCurrentSound()
 
-    if (gameMode === 'quiz') {
+    if (gameMode === 'quiz' || gameMode === 'teologico') {
       handleAnswer(false);
       setAnimTrigger('slide');
       selectNextQuestion();
@@ -256,7 +258,10 @@ export default function GameScreen() {
           transparent={true}
           rightComponent={
             <Pressable
-              onPress={() => setIsSoundEnabled(!isSoundEnabled)}
+              onPress={() => {
+                playClickSound();
+                setIsSoundEnabled(!isSoundEnabled);
+              }}
               style={styles.soundButton}
             >
               {isSoundEnabled ? (
@@ -269,7 +274,7 @@ export default function GameScreen() {
         />
 
         {/* Scoreboard Area */}
-        {gameMode === 'quiz' && renderScoreboard()}
+        {(gameMode === 'quiz' || gameMode === 'teologico') && renderScoreboard()}
 
         {/* Turn indicator and Timer bar combined */}
         <View style={styles.turnSection}>
@@ -278,7 +283,7 @@ export default function GameScreen() {
               Vez de <Text style={styles.turnBannerName}>{currentPlayer.name}</Text>
             </Text>
           </View>
-          {gameMode === 'quiz' && (
+          {(gameMode === 'quiz' || gameMode === 'teologico') && (
             <View style={styles.timerTrack}>
               <Animated.View style={[
                 styles.timerBar,
@@ -299,18 +304,27 @@ export default function GameScreen() {
           question={currentQuestion}
           levelLabel={currentQuestion.level || config.level}
           actionTrigger={animTrigger}
-          showAnswerButton={gameMode === 'quiz'}
+          showAnswerButton={gameMode === 'quiz' || gameMode === 'teologico'}
           timeUp={isTimeUp}
           showAnswer={showAnswer}
           onToggleAnswer={() => {
             setAnimTrigger('flip');
             setShowAnswer(!showAnswer);
           }}
+          containerStyle={gameMode === 'teologico' ? { height: '50%' } : undefined}
         />
+
+        {gameMode === 'teologico' && showAnswer && (
+          <View style={styles.observationContainer}>
+            <Text style={styles.observationText}>
+              Obs: as respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
+            </Text>
+          </View>
+        )}
 
         {/* Actions Area */}
         <View style={styles.actionsContainer}>
-          {gameMode === 'quiz' ? (
+          {(gameMode === 'quiz' || gameMode === 'teologico') ? (
             <View style={styles.actionRow}>
               <View style={styles.halfAction}>
                 <BrutalButton variant="surface" size="large" onPress={handleWrong}>
@@ -469,5 +483,26 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  observationContainer: {
+    backgroundColor: '#FEF08A',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 6,
+    marginBottom: 6,
+    shadowColor: Colors.border,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
+  observationText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 11,
+    color: Colors.text,
+    textAlign: 'center',
+    lineHeight: 15,
   },
 });

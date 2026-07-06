@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, LayoutAnimation, UIManager, Platform } from 'react-native';
+import { playClickSound } from '@/services/soundManager';
 import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
 import { X } from 'lucide-react-native';
 
@@ -19,6 +20,7 @@ interface PlayerChipProps {
 export default function PlayerChip({ name, onRemove, showRemove = true }: PlayerChipProps) {
   const handleRemove = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    playClickSound();
     onRemove?.();
   };
 

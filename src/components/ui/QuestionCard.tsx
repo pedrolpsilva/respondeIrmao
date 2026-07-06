@@ -13,6 +13,7 @@ interface QuestionCardProps {
   timeUp?: boolean;
   showAnswer?: boolean;
   onToggleAnswer?: () => void;
+  containerStyle?: any;
 }
 
 const LEVEL_DISPLAY_NAMES: Record<string, string> = {
@@ -32,6 +33,7 @@ export default function QuestionCard({
   timeUp,
   showAnswer = false,
   onToggleAnswer,
+  containerStyle,
 }: QuestionCardProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -109,7 +111,7 @@ export default function QuestionCard({
   };
 
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, containerStyle]}>
       {/* Hard drop shadow */}
       <View style={styles.cardShadow} />
 
