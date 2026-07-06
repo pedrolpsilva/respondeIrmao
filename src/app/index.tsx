@@ -4,12 +4,13 @@ import BrutalModal from '@/components/ui/BrutalModal';
 import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
 import { GameMode, useGame } from '@/hooks/useGameContext';
 import { useRouter } from 'expo-router';
+import { Star } from 'lucide-react-native';
 import React from 'react';
 import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { setGameMode, resetGame } = useGame();
+  const { setGameMode, resetGame, setPlayers } = useGame();
 
   const [warn, setWarn] = React.useState<null | string>();
   const [feedbackVisible, setFeedbackVisible] = React.useState(false);
@@ -83,6 +84,18 @@ export default function HomeScreen() {
       'Já orou hoje?',
       'Abençoa esse irmão que está ao teu lado!',
       'Não é só um jogo, é voltar a comunhão!',
+      'Mandamento: Ame a Deus com tudo que tem!',
+      'Mandamento: Ame aos outros como Jesus amou!',
+      'Dica: Seu chamado é testemunhar e anunciar Jesus!',
+      'Dica: Se deleite na presença do Senhor!',
+      'Dica: A palavra de Deus é lâmpada para os nossos pés!',
+      'Dica: Deus é especialista em recomeços!',
+      'Dica: Não desista!',
+      'Mandamento: Perdoe!',
+      'Mandamento: Se arrependa!',
+      'Mandamento: Busque a santidade!',
+      'Mandamento: Ore sem cessar!',
+      'Mandamento: Seja grato!',
     ];
     return subtittles[Math.floor(Math.random() * subtittles.length)];
   };
@@ -120,54 +133,92 @@ export default function HomeScreen() {
         <View style={styles.mainActions}>
           <BrutalButton
             variant="primary"
-            size="large"
+            fullWidth={false}
             onPress={() => handleStart('compartilhar')}
-            style={styles.spacing}
+            style={styles.gridItem}
           >
-            JOGAR COMPARTILHAMENTO
+            <Text style={[
+              styles.gridItemText,
+              {
+                fontFamily: Fonts.subheading,
+                fontWeight: '700',
+                color: '#FFFFFF',
+              }
+            ]}>
+              COMPARTILHAR
+            </Text>
+            <View style={styles.badgeContainer}>
+              <Star size={16} color={Colors.primary} fill={Colors.primary} />
+            </View>
           </BrutalButton>
 
           <BrutalButton
-            variant="primary"
-            size="large"
+            variant="accent1"
+            fullWidth={false}
             onPress={() => handleStart('quiz')}
-            style={styles.spacing}
+            style={styles.gridItem}
+            textStyle={styles.gridItemText}
           >
-            JOGAR QUIZ
+            QUIZ BÍBLICO
           </BrutalButton>
-        </View>
 
-        {/* Secondary Small Actions */}
-        <View style={styles.footerActions}>
-          <View style={styles.halfWidth}>
-            <BrutalButton
-              variant="primary"
-              size="medium"
-              onPress={() => router.push('/help')}
-            >
-              Ajuda
-            </BrutalButton>
-          </View>
-          <View style={styles.halfWidth}>
-            <BrutalButton
-              variant="primary"
-              size="medium"
-              onPress={() => router.push('/about')}
-            >
-              Sobre
-            </BrutalButton>
-          </View>
-        </View>
+          <BrutalButton
+            variant="accent2"
+            fullWidth={false}
+            onPress={() => handleStart('teologico')}
+            style={styles.gridItem}
+            textStyle={styles.gridItemText}
+          >
+            QUIZ TEOLÓGICO
+          </BrutalButton>
 
-        {/* Feedback CTA */}
-        <View style={styles.feedbackSection}>
           <BrutalButton
             variant="secondary"
-            size="medium"
-            onPress={() => setFeedbackVisible(true)}
+            fullWidth={false}
+            onPress={() => {
+              setGameMode('torre');
+              setPlayers([{ id: '1', name: 'Jogador', points: 0 }]);
+              resetGame();
+              router.push('/torre');
+            }}
+            style={styles.gridItem}
+            textStyle={styles.gridItemText}
           >
-            Feedback
+            TORRE DE BABEL (solo)
           </BrutalButton>
+        </View>
+
+        <View style={styles.footerActionsTwo}>
+          <View style={styles.footerActions}>
+            <View style={styles.halfWidth}>
+              <BrutalButton
+                variant="primary"
+                size="medium"
+                onPress={() => router.push('/help')}
+              >
+                Ajuda
+              </BrutalButton>
+            </View>
+            <View style={styles.halfWidth}>
+              <BrutalButton
+                variant="primary"
+                size="medium"
+                onPress={() => router.push('/about')}
+              >
+                Sobre
+              </BrutalButton>
+            </View>
+          </View>
+
+          <View style={styles.feedbackSection}>
+            <BrutalButton
+              variant="primary"
+              size="medium"
+              onPress={() => setFeedbackVisible(true)}
+            >
+              Feedback
+            </BrutalButton>
+          </View>
         </View>
 
         {warn != null && (
@@ -252,20 +303,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mainActions: {
-    flex: 1,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%', // Garante que ocupa toda a largura disponível
     gap: 16,
     marginTop: 40,
   },
-  spacing: {
-    marginBottom: 8,
+  gridItem: {
+    width: '45%',
+    aspectRatio: 1,
+  },
+  gridItemText: {
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: 600
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: Metrics.borderWidth,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   footerActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
     gap: 12,
-    marginBottom: 16,
+  },
+  footerActionsTwo: {
+    width: '100%',
+    gap: 12,
+    marginTop: 16,
   },
   halfWidth: {
     flex: 1,

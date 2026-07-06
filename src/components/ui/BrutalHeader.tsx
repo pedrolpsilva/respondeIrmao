@@ -1,5 +1,6 @@
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useModal } from '@/hooks/useModal';
+import { playClickSound } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
@@ -11,15 +12,21 @@ interface BrutalHeaderProps {
   backRoute?: boolean;
   transparent?: boolean;
   rightComponent?: React.ReactNode;
+  onBackPress?: () => void;
 }
 
-export default function BrutalHeader({ title, showBack = true, backRoute, transparent = false, rightComponent }: BrutalHeaderProps) {
+export default function BrutalHeader({ title, showBack = true, backRoute, transparent = false, rightComponent, onBackPress }: BrutalHeaderProps) {
   const router = useRouter();
   const { showAlert } = useModal();
 
   const handleBack = () => {
     Vibration.vibrate(10);
-    router.back();
+    playClickSound();
+    if (onBackPress) {
+      onBackPress();
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -37,6 +44,7 @@ export default function BrutalHeader({ title, showBack = true, backRoute, transp
           {rightComponent}
           {backRoute &&
             <Pressable onPress={() => {
+              playClickSound();
               showAlert({
                 title: 'Sair da Partida',
                 message: 'Deseja realmente voltar ao menu e reiniciar?',

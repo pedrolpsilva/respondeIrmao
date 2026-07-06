@@ -1,9 +1,9 @@
-import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
 import { questionsService } from '@/services/questionsService';
 import * as Crypto from 'expo-crypto';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-export type GameMode = 'quiz' | 'compartilhar';
+export type GameMode = 'quiz' | 'compartilhar' | 'torre' | 'teologico';
 
 export interface Player {
   id: string;
@@ -13,7 +13,7 @@ export interface Player {
 }
 
 export interface GameConfig {
-  level: string; // 'multidao' | 'discipulo' | 'apostolo' | 'comunhao' | 'testemunho' | 'confissao'
+  level: string; // 'multidao' | 'discipulo' | 'apostolo' | 'comunhao' | 'testemunho' | 'confissao' | 'teologico'
   targetPoints: number; // 10, 15, 20
   timerBase: number; // seconds: 30, 60, 90, 120
   repeatSamePlayer: boolean;
@@ -34,6 +34,8 @@ interface GameContextType {
   setPlayedQuestionIds: React.Dispatch<React.SetStateAction<string[]>>;
   quizQuestions: Record<string, Question[]>;
   compartilharQuestions: Record<string, Question[]>;
+  torreQuestions: Question[];
+  teologicoQuestions: Question[];
   isSyncingQuestions: boolean;
 
   // Helpers to manage state transitions
@@ -63,6 +65,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [playedQuestionIds, setPlayedQuestionIds] = useState<string[]>([]);
   const [quizQuestions, setQuizQuestions] = useState<Record<string, Question[]>>(QUIZ_QUESTIONS);
   const [compartilharQuestions, setCompartilharQuestions] = useState<Record<string, Question[]>>(COMPARTILHAR_QUESTIONS);
+  const [torreQuestions, setTorreQuestions] = useState<Question[]>(TORRE_QUESTIONS);
+  const [teologicoQuestions, setTeologicoQuestions] = useState<Question[]>(TEOLOGICO_QUESTIONS);
   const [isSyncingQuestions, setIsSyncingQuestions] = useState<boolean>(false);
 
   useEffect(() => {
@@ -71,6 +75,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const local = await questionsService.loadLocalQuestions();
       setQuizQuestions(local.quiz);
       setCompartilharQuestions(local.compartilhar);
+      setTorreQuestions(local.torre);
+      setTeologicoQuestions(local.teologico);
 
       // 2. Try fetching from Sheets in background
       setIsSyncingQuestions(true);
@@ -78,6 +84,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         const updated = await questionsService.fetchAndSyncQuestions();
         setQuizQuestions(updated.quiz);
         setCompartilharQuestions(updated.compartilhar);
+        setTorreQuestions(updated.torre);
+        setTeologicoQuestions(updated.teologico);
         // console.log('[GameProvider] Synced latest questions successfully.');
       } catch (err) {
         // console.log('[GameProvider] Cloud sync not updated:', (err as Error).message);
@@ -150,6 +158,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setPlayedQuestionIds,
         quizQuestions,
         compartilharQuestions,
+        torreQuestions,
+        teologicoQuestions,
         isSyncingQuestions,
         resetGame,
         addPlayer,

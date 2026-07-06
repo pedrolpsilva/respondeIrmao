@@ -1,6 +1,6 @@
 import { questionsService } from '../questionsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -24,15 +24,17 @@ describe('questionsService', () => {
 
       const result = await questionsService.loadLocalQuestions();
 
-      // Verify AsyncStorage.getItem was called for both keys
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2);
+      // Verify AsyncStorage.getItem was called for all keys
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:quiz_questions');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:compartilhar_questions');
+      expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:torre_questions');
 
       // Verify it returns the default questions
       expect(result).toEqual({
         quiz: QUIZ_QUESTIONS,
         compartilhar: COMPARTILHAR_QUESTIONS,
+        torre: TORRE_QUESTIONS,
       });
 
       // Verify the error was logged
@@ -49,6 +51,9 @@ describe('questionsService', () => {
       const mockCompartilhar = {
         level2: [{ id: 'c1', text: 'C1', level: 'level2' }]
       };
+      const mockTorre = [
+        { id: 't1', text: 'T1', correctAnswer: 'T', wrongAnswers: ['W'], level: 'facil' }
+      ];
 
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key) => {
         if (key === '@respondeirmao:quiz_questions') {
@@ -57,16 +62,20 @@ describe('questionsService', () => {
         if (key === '@respondeirmao:compartilhar_questions') {
           return Promise.resolve(JSON.stringify(mockCompartilhar));
         }
+        if (key === '@respondeirmao:torre_questions') {
+          return Promise.resolve(JSON.stringify(mockTorre));
+        }
         return Promise.resolve(null);
       });
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
 
       expect(result).toEqual({
         quiz: mockQuiz,
         compartilhar: mockCompartilhar,
+        torre: mockTorre,
       });
     });
 
@@ -75,11 +84,12 @@ describe('questionsService', () => {
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(2);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
 
       expect(result).toEqual({
         quiz: QUIZ_QUESTIONS,
         compartilhar: COMPARTILHAR_QUESTIONS,
+        torre: TORRE_QUESTIONS,
       });
     });
   });

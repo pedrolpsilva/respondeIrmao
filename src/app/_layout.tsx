@@ -52,6 +52,7 @@ export default function RootLayout() {
             <Stack.Screen name="players" />
             <Stack.Screen name="config" />
             <Stack.Screen name="game" />
+            <Stack.Screen name="torre" />
             <Stack.Screen name="results" />
             <Stack.Screen name="about" />
             <Stack.Screen name="help" />

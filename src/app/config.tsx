@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, Vibration, View } from 'react-native';
+import { playClickSound } from '@/services/soundManager';
 
 export default function ConfigScreen() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function ConfigScreen() {
 
   // Local states for UI, sync to context on Submit
   const [selectedLevel, setSelectedLevel] = useState(
-    gameMode === 'quiz' ? 'multidao' : 'comunhao'
+    gameMode === 'teologico' ? 'teologico' : gameMode === 'quiz' ? 'multidao' : 'comunhao'
   );
   const [targetScore, setTargetScore] = useState(config.targetPoints || 10);
   const [timer, setTimer] = useState(config.timerBase || 30);
@@ -48,6 +49,7 @@ export default function ConfigScreen() {
         key={value}
         onPress={() => {
           Vibration.vibrate(10);
+          playClickSound();
           onSelect(value);
         }}
         style={[
@@ -78,48 +80,58 @@ export default function ConfigScreen() {
 
           <View style={styles.headerInfo}>
             <Text style={styles.subtitle}>
-              Ajuste as regras para o Modo {gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
+              Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
             </Text>
           </View>
 
+          {gameMode === 'teologico' && (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningText}>
+                ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
+              </Text>
+            </View>
+          )}
+
           {/* Level Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Nível de Dificuldade</Text>
-            <View style={styles.segmentedContainer}>
-              {gameMode === 'compartilhar' ? (
-                <>
-                  {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, Colors.accent1)}
-                  {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, Colors.warning)}
-                  {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, Colors.accent2)}
-                </>
-              ) : (
-                <>
-                  {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, Colors.accent1)}
-                  {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, Colors.warning)}
-                  {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, Colors.accent2)}
-                </>
-              )}
-            </View>
-
-            {/* include lower levels switch */}
-            <View style={[styles.toggleCard, { marginTop: 12 }]}>
-              <View style={styles.toggleTextWrapper}>
-                <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
-                <Text style={styles.toggleSubtitle}>
-                  Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
-                </Text>
+          {gameMode !== 'teologico' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Nível de Dificuldade</Text>
+              <View style={styles.segmentedContainer}>
+                {gameMode === 'compartilhar' ? (
+                  <>
+                    {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, Colors.accent1)}
+                    {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, Colors.warning)}
+                    {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, Colors.accent2)}
+                  </>
+                ) : (
+                  <>
+                    {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, Colors.accent1)}
+                    {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, Colors.warning)}
+                    {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, Colors.accent2)}
+                  </>
+                )}
               </View>
-              <Switch
-                trackColor={{ false: Colors.muted, true: Colors.primary }}
-                thumbColor={Colors.border}
-                ios_backgroundColor={Colors.muted}
-                onValueChange={setIncludeLower}
-                value={includeLower}
-              />
-            </View>
-          </View>
 
-          {gameMode === 'quiz' ? (
+              {/* include lower levels switch */}
+              <View style={[styles.toggleCard, { marginTop: 12 }]}>
+                <View style={styles.toggleTextWrapper}>
+                  <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
+                  <Text style={styles.toggleSubtitle}>
+                    Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
+                  </Text>
+                </View>
+                <Switch
+                  trackColor={{ false: Colors.muted, true: Colors.primary }}
+                  thumbColor={Colors.border}
+                  ios_backgroundColor={Colors.muted}
+                  onValueChange={setIncludeLower}
+                  value={includeLower}
+                />
+              </View>
+            </View>
+          )}
+
+          {(gameMode === 'quiz' || gameMode === 'teologico') ? (
             <>
               {/* Target Score Selection */}
               <View style={styles.section}>
@@ -138,6 +150,7 @@ export default function ConfigScreen() {
                   <Pressable
                     onPress={() => {
                       Vibration.vibrate(10);
+                      playClickSound();
                       setTimer(prev => Math.max(15, prev - 15));
                     }}
                     style={styles.timerButton}
@@ -152,6 +165,7 @@ export default function ConfigScreen() {
                   <Pressable
                     onPress={() => {
                       Vibration.vibrate(10);
+                      playClickSound();
                       setTimer(prev => Math.min(120, prev + 15));
                     }}
                     style={styles.timerButton}
@@ -325,5 +339,25 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 16,
+  },
+  warningCard: {
+    backgroundColor: '#FEF08A',
+    borderWidth: Metrics.borderWidth,
+    borderColor: Colors.border,
+    borderRadius: Metrics.radiusCard,
+    padding: 16,
+    marginBottom: 24,
+    // Neobrutalist shadow
+    shadowColor: Colors.border,
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  warningText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 20,
   },
 });

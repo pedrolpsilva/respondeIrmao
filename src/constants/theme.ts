@@ -10,13 +10,19 @@ export const Colors = {
   accent2: '#BE123C', // Rosa / Ações Destrutivas/Timer
   warning: '#F59E0B',
   border: '#1C1917',
+  backgroundElement: '#FFFFFF',
+  backgroundSelected: '#2959F8',
+  textSecondary: '#A8A29E',
 } as const;
+
+export type ThemeColor = keyof typeof Colors;
 
 export const Fonts = {
   heading: 'Outfit_800ExtraBold',
   subheading: 'Outfit_700Bold',
   body: 'DMSans_500Medium',
   bodyBold: 'DMSans_700Bold',
+  mono: Platform.select({ ios: 'Courier', android: 'monospace', default: 'Courier' })!,
 };
 
 export const Metrics = {

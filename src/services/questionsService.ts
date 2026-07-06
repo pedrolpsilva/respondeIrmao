@@ -1,8 +1,10 @@
-import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY_QUIZ = '@respondeirmao:quiz_questions';
 const STORAGE_KEY_COMPARTILHAR = '@respondeirmao:compartilhar_questions';
+const STORAGE_KEY_TORRE = '@respondeirmao:torre_questions';
+const STORAGE_KEY_TEOLOGICO = '@respondeirmao:teologico_questions';
 
 const SPREADSHEET_PUBHTML_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pubhtml';
 const SPREADSHEET_CSV_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pub';
@@ -111,6 +113,8 @@ function extractSheetItems(html: string): SheetItem[] {
 export interface CachedQuestions {
   quiz: Record<string, Question[]>;
   compartilhar: Record<string, Question[]>;
+  torre: Question[];
+  teologico: Question[];
 }
 
 export const questionsService = {
@@ -119,20 +123,26 @@ export const questionsService = {
    */
   async loadLocalQuestions(): Promise<CachedQuestions> {
     try {
-      const [quizJson, compartilharJson] = await Promise.all([
+      const [quizJson, compartilharJson, torreJson, teologicoJson] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEY_QUIZ),
-        AsyncStorage.getItem(STORAGE_KEY_COMPARTILHAR)
+        AsyncStorage.getItem(STORAGE_KEY_COMPARTILHAR),
+        AsyncStorage.getItem(STORAGE_KEY_TORRE),
+        AsyncStorage.getItem(STORAGE_KEY_TEOLOGICO)
       ]);
 
       const quiz = quizJson ? JSON.parse(quizJson) : QUIZ_QUESTIONS;
       const compartilhar = compartilharJson ? JSON.parse(compartilharJson) : COMPARTILHAR_QUESTIONS;
+      const torre = torreJson ? JSON.parse(torreJson) : TORRE_QUESTIONS;
+      const teologico = teologicoJson ? JSON.parse(teologicoJson) : TEOLOGICO_QUESTIONS;
 
-      return { quiz, compartilhar };
+      return { quiz, compartilhar, torre, teologico };
     } catch (error) {
       console.error('[QuestionsService] Failed to read local cache:', error);
       return {
         quiz: QUIZ_QUESTIONS,
-        compartilhar: COMPARTILHAR_QUESTIONS
+        compartilhar: COMPARTILHAR_QUESTIONS,
+        torre: TORRE_QUESTIONS,
+        teologico: TEOLOGICO_QUESTIONS
       };
     }
   },
@@ -162,13 +172,17 @@ export const questionsService = {
 
     const newQuiz: Record<string, Question[]> = { ...QUIZ_QUESTIONS };
     const newCompartilhar: Record<string, Question[]> = { ...COMPARTILHAR_QUESTIONS };
+    let newTorre: Question[] = [ ...TORRE_QUESTIONS ];
+    let newTeologico: Question[] = [ ...TEOLOGICO_QUESTIONS ];
 
     // Process all matched sheets concurrently
     const sheetPromises = sheetItems.map(async (item) => {
       const isCompartilhar = item.name.startsWith('Compartilhamento - ');
       const isQuiz = item.name.startsWith('Quiz - ');
+      const isTorre = item.name === 'Torre de Babel';
+      const isTeologico = item.name === 'Quiz Teologico';
 
-      if (!isCompartilhar && !isQuiz) {
+      if (!isCompartilhar && !isQuiz && !isTorre && !isTeologico) {
         return null; // Ignore sheets we don't use
       }
 
@@ -182,9 +196,7 @@ export const questionsService = {
         if (!csvResponse.ok) {
           console.warn(`[QuestionsService] Failed downloading sheet: ${item.name}`);
           return null; // Skip this specific sheet but could proceed or fail entirely?
-          // Actually, the safest is to keep original data for this sheet if failed.
         }
-        // console.log('csvText 1', csvResponse)
 
         const csvText = await csvResponse.text();
 
@@ -207,17 +219,40 @@ export const questionsService = {
               correctAnswer: row[2] || '',
               level: levelKey,
             };
-          } else {
+          } else if (isTeologico) {
+            // Quiz Teologico: A=Question, B=Separator, C=Answer
+            return {
+              id: `remote_teologico_${index}`,
+              text: row[0] || '',
+              correctAnswer: row[2] || '',
+              level: 'teologico',
+            };
+          } else if (isCompartilhar) {
             // Compartilhamento: A=Question
             return {
               id: `remote_${levelKey}_${index}`,
               text: row[0] || '',
               level: levelKey,
             };
+          } else {
+            // Torre de Babel: A=Question, B=Correct Answer, C, D, E=Wrong Answers, F=Bible Reference
+            let level = 'facil';
+            if (index >= 90) level = 'muito_dificil';
+            else if (index >= 60) level = 'dificil';
+            else if (index >= 30) level = 'media';
+
+            return {
+              id: `remote_torre_${index}`,
+              text: row[0] || '',
+              correctAnswer: row[1] || '',
+              wrongAnswers: [row[2] || '', row[3] || '', row[4] || ''].filter(Boolean),
+              bibleReference: row[5] || '',
+              level,
+            };
           }
         });
 
-        return { isQuiz, levelKey, mappedQuestions };
+        return { isQuiz, isCompartilhar, isTorre, isTeologico, levelKey, mappedQuestions };
       } catch (error) {
         console.warn(`[QuestionsService] Error fetching sheet ${item.name}:`, error);
         return null;
@@ -232,8 +267,12 @@ export const questionsService = {
 
       if (result.isQuiz) {
         newQuiz[result.levelKey] = result.mappedQuestions;
-      } else {
+      } else if (result.isCompartilhar) {
         newCompartilhar[result.levelKey] = result.mappedQuestions;
+      } else if (result.isTorre) {
+        newTorre = result.mappedQuestions;
+      } else if (result.isTeologico) {
+        newTeologico = result.mappedQuestions;
       }
       hasUpdates = true;
     }
@@ -246,9 +285,11 @@ export const questionsService = {
     // console.log('[QuestionsService] Sync successful, storing cache to device...');
     await Promise.all([
       AsyncStorage.setItem(STORAGE_KEY_QUIZ, JSON.stringify(newQuiz)),
-      AsyncStorage.setItem(STORAGE_KEY_COMPARTILHAR, JSON.stringify(newCompartilhar))
+      AsyncStorage.setItem(STORAGE_KEY_COMPARTILHAR, JSON.stringify(newCompartilhar)),
+      AsyncStorage.setItem(STORAGE_KEY_TORRE, JSON.stringify(newTorre)),
+      AsyncStorage.setItem(STORAGE_KEY_TEOLOGICO, JSON.stringify(newTeologico))
     ]);
 
-    return { quiz: newQuiz, compartilhar: newCompartilhar };
+    return { quiz: newQuiz, compartilhar: newCompartilhar, torre: newTorre, teologico: newTeologico };
   }
 };
