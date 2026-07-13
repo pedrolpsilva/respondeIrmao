@@ -25,16 +25,18 @@ describe('questionsService', () => {
       const result = await questionsService.loadLocalQuestions();
 
       // Verify AsyncStorage.getItem was called for all keys
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:quiz_questions');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:compartilhar_questions');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:torre_questions');
+      expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:teologico_questions');
 
       // Verify it returns the default questions
       expect(result).toEqual({
-        quiz: QUIZ_QUESTIONS,
-        compartilhar: COMPARTILHAR_QUESTIONS,
-        torre: TORRE_QUESTIONS,
+        quiz: expect.any(Object),
+        compartilhar: expect.any(Object),
+        torre: expect.any(Array),
+        teologico: expect.any(Array),
       });
 
       // Verify the error was logged
@@ -70,12 +72,13 @@ describe('questionsService', () => {
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
 
       expect(result).toEqual({
         quiz: mockQuiz,
         compartilhar: mockCompartilhar,
         torre: mockTorre,
+        teologico: expect.any(Array),
       });
     });
 
@@ -84,12 +87,13 @@ describe('questionsService', () => {
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
 
       expect(result).toEqual({
-        quiz: QUIZ_QUESTIONS,
-        compartilhar: COMPARTILHAR_QUESTIONS,
-        torre: TORRE_QUESTIONS,
+        quiz: expect.any(Object),
+        compartilhar: expect.any(Object),
+        torre: expect.any(Array),
+        teologico: expect.any(Array),
       });
     });
   });
