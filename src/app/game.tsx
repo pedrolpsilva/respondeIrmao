@@ -46,36 +46,64 @@ export default function GameScreen() {
 
   const currentPlayer = players[currentPlayerIndex];
 
+  const mappedTeologico = useMemo(() => {
+    return (teologicoQuestions || []).map(q => ({ ...q, level: 'teologico' }));
+  }, [teologicoQuestions]);
+
+  const mappedQuiz = useMemo(() => {
+    const m = (quizQuestions['multidao'] || []).map(q => ({ ...q, level: q.level || 'multidao' }));
+    const d = (quizQuestions['discipulo'] || []).map(q => ({ ...q, level: q.level || 'discipulo' }));
+    const a = (quizQuestions['apostolo'] || []).map(q => ({ ...q, level: q.level || 'apostolo' }));
+    const other = Object.keys(quizQuestions)
+      .filter(k => k !== 'multidao' && k !== 'discipulo' && k !== 'apostolo')
+      .reduce((acc, level) => {
+        acc[level] = (quizQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
+        return acc;
+      }, {} as Record<string, Question[]>);
+
+    return { multidao: m, discipulo: d, apostolo: a, ...other };
+  }, [quizQuestions]);
+
+  const mappedCompartilhar = useMemo(() => {
+    const c = (compartilharQuestions['comunhao'] || []).map(q => ({ ...q, level: q.level || 'comunhao' }));
+    const t = (compartilharQuestions['testemunho'] || []).map(q => ({ ...q, level: q.level || 'testemunho' }));
+    const f = (compartilharQuestions['confissao'] || []).map(q => ({ ...q, level: q.level || 'confissao' }));
+    const other = Object.keys(compartilharQuestions)
+      .filter(k => k !== 'comunhao' && k !== 'testemunho' && k !== 'confissao')
+      .reduce((acc, level) => {
+        acc[level] = (compartilharQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
+        return acc;
+      }, {} as Record<string, Question[]>);
+
+    return { comunhao: c, testemunho: t, confissao: f, ...other };
+  }, [compartilharQuestions]);
+
   // Load relevant pool
   const getQuestionPool = useCallback(() => {
     const { level, includeLowerLevels } = config;
 
     if (gameMode === 'teologico') {
-      return (teologicoQuestions || []).map(q => ({ ...q, level: 'teologico' }));
+      return mappedTeologico;
     }
 
     if (gameMode === 'quiz') {
-      const m = (quizQuestions['multidao'] || []).map(q => ({ ...q, level: q.level || 'multidao' }));
-      const d = (quizQuestions['discipulo'] || []).map(q => ({ ...q, level: q.level || 'discipulo' }));
-      const a = (quizQuestions['apostolo'] || []).map(q => ({ ...q, level: q.level || 'apostolo' }));
+      const { multidao: m, discipulo: d, apostolo: a, ...other } = mappedQuiz;
 
       if (level === 'multidao') return m;
       if (level === 'discipulo') return includeLowerLevels ? [...m, ...d] : d;
       if (level === 'apostolo') return includeLowerLevels ? [...m, ...d, ...a] : a;
 
-      return (quizQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
+      return (other as Record<string, Question[]>)[level] || [];
     }
 
-    const c = (compartilharQuestions['comunhao'] || []).map(q => ({ ...q, level: q.level || 'comunhao' }));
-    const t = (compartilharQuestions['testemunho'] || []).map(q => ({ ...q, level: q.level || 'testemunho' }));
-    const f = (compartilharQuestions['confissao'] || []).map(q => ({ ...q, level: q.level || 'confissao' }));
+    const { comunhao: c, testemunho: t, confissao: f, ...other } = mappedCompartilhar;
 
     if (level === 'comunhao') return c;
     if (level === 'testemunho') return includeLowerLevels ? [...c, ...t] : t;
     if (level === 'confissao') return includeLowerLevels ? [...c, ...t, ...f] : f;
 
-    return (compartilharQuestions[level] || []).map(q => ({ ...q, level: q.level || level }));
-  }, [gameMode, config.level, config.includeLowerLevels, quizQuestions, compartilharQuestions, teologicoQuestions]);
+    return (other as Record<string, Question[]>)[level] || [];
+  }, [gameMode, config.level, config.includeLowerLevels, mappedTeologico, mappedQuiz, mappedCompartilhar]);
 
   // Pull random new question
   const selectNextQuestion = useCallback((forceResetRepeated = false) => {
