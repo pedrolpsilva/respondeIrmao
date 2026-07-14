@@ -1,6 +1,6 @@
 import { questionsService } from '../questionsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS, TORRE_QUESTIONS, TEOLOGICO_QUESTIONS } from '@/constants/questions';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
