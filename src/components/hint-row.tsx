@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 
 import { ThemedText } from './themed-text';
@@ -8,7 +8,7 @@ import { Spacing } from '@/constants/theme';
 
 type HintRowProps = {
   title?: string;
-  hint?: ReactNode;
+  hint?: React.ReactNode;
 };
 
 export function HintRow({ title = 'Try editing', hint = 'app/index.tsx' }: HintRowProps) {
