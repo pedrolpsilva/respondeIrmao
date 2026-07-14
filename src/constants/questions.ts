@@ -7,6 +7,16 @@ export interface Question {
   bibleReference?: string;
 }
 
+export interface WhoAmICard {
+  id: string;
+  answer: string;    // ex: "Pedro"
+  category: string;  // ex: "Apóstolo", "Profeta", "Local", "Evento"
+  hints: string[];   // ex: ["Andei sobre as águas", "Neguei a Jesus 3x", ...]
+}
+
+// Cards are populated at runtime via Google Sheets sync (aba "Quem Sou Eu")
+export const WHO_AM_I_CARDS: WhoAmICard[] = [];
+
 export const QUIZ_QUESTIONS: Record<string, Question[]> = {
   multidao: [
     { id: 'qm1', text: 'Quem construiu a arca que salvou os animais do dilúvio?', correctAnswer: 'Noé' },

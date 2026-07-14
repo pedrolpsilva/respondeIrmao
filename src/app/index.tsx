@@ -6,7 +6,7 @@ import { GameMode, useGame } from '@/hooks/useGameContext';
 import { useRouter } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,6 +19,12 @@ export default function HomeScreen() {
 
   const handleStart = (mode: GameMode) => {
     setGameMode(mode);
+    resetGame();
+    router.push('/players');
+  };
+
+  const handleStartQuemSouEu = () => {
+    setGameMode('quem-sou-eu');
     resetGame();
     router.push('/players');
   };
@@ -120,7 +126,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.innerContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Header Logo Section */}
         <View style={styles.logoSection}>
           <Text style={styles.logoTextTop}>RESPONDE,</Text>
@@ -133,18 +139,15 @@ export default function HomeScreen() {
         <View style={styles.mainActions}>
           <BrutalButton
             variant="primary"
-            fullWidth={false}
+            fullWidth={true}
             onPress={() => handleStart('compartilhar')}
-            style={styles.gridItem}
           >
-            <Text style={[
-              styles.gridItemText,
-              {
-                fontFamily: Fonts.subheading,
-                fontWeight: '700',
-                color: '#FFFFFF',
-              }
-            ]}>
+            <Text style={{
+              fontFamily: Fonts.subheading,
+              fontWeight: '700',
+              color: '#FFFFFF',
+              fontSize: 18,
+            }}>
               COMPARTILHAR
             </Text>
             <View style={styles.badgeContainer}>
@@ -154,37 +157,39 @@ export default function HomeScreen() {
 
           <BrutalButton
             variant="accent1"
-            fullWidth={false}
+            fullWidth={true}
             onPress={() => handleStart('quiz')}
-            style={styles.gridItem}
-            textStyle={styles.gridItemText}
           >
             QUIZ BÍBLICO
           </BrutalButton>
 
           <BrutalButton
             variant="accent2"
-            fullWidth={false}
+            fullWidth={true}
             onPress={() => handleStart('teologico')}
-            style={styles.gridItem}
-            textStyle={styles.gridItemText}
           >
             QUIZ TEOLÓGICO
           </BrutalButton>
 
           <BrutalButton
             variant="secondary"
-            fullWidth={false}
+            fullWidth={true}
             onPress={() => {
               setGameMode('torre');
               setPlayers([{ id: '1', name: 'Jogador', points: 0 }]);
               resetGame();
               router.push('/torre');
             }}
-            style={styles.gridItem}
-            textStyle={styles.gridItemText}
           >
             TORRE DE BABEL (solo)
+          </BrutalButton>
+
+          <BrutalButton
+            variant="purple"
+            fullWidth={true}
+            onPress={handleStartQuemSouEu}
+          >
+            QUEM SOU EU?
           </BrutalButton>
         </View>
 
@@ -264,7 +269,7 @@ export default function HomeScreen() {
             />
           </View>
         </BrutalModal>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -274,12 +279,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  innerContainer: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
     paddingHorizontal: Metrics.containerMargin,
     justifyContent: 'space-between',
-    paddingTop: 80,
-    paddingBottom: 60,
+    paddingTop: 60,
+    paddingBottom: 40,
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
@@ -303,21 +308,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mainActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    width: '100%', // Garante que ocupa toda a largura disponível
+    flexDirection: 'column',
+    width: '100%',
     gap: 16,
-    marginTop: 40,
-  },
-  gridItem: {
-    width: '45%',
-    aspectRatio: 1,
+    marginTop: 32,
   },
   gridItemText: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
-    fontWeight: 600
+    fontWeight: 600,
   },
   badgeContainer: {
     position: 'absolute',
@@ -368,6 +367,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 12,
   },
+
   subtittle: {
     fontFamily: Fonts.body,
     fontSize: 18,

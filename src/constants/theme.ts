@@ -9,6 +9,7 @@ export const Colors = {
   accent1: '#4D7C0F', // Verde / Destaques Positivos
   accent2: '#BE123C', // Rosa / Ações Destrutivas/Timer
   warning: '#F59E0B',
+  purple: '#7C3AED', // Roxo para o modo Quem Sou Eu
   border: '#1C1917',
   backgroundElement: '#FFFFFF',
   backgroundSelected: '#2959F8',

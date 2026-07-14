@@ -1,9 +1,9 @@
-import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
 import { questionsService } from '@/services/questionsService';
 import * as Crypto from 'expo-crypto';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-export type GameMode = 'quiz' | 'compartilhar' | 'torre' | 'teologico';
+export type GameMode = 'quiz' | 'compartilhar' | 'torre' | 'teologico' | 'quem-sou-eu';
 
 export interface Player {
   id: string;
@@ -21,6 +21,13 @@ export interface GameConfig {
   includeLowerLevels: boolean;
 }
 
+export interface WhoAmIConfig {
+  targetPoints: number;    // 20, 30, 40
+  timerEnabled: boolean;
+  timerBase: number;       // 30, 40, 50, 60, 70, 80, 90 seconds
+  selectedCategories: string[]; // [] means all
+}
+
 interface GameContextType {
   gameMode: GameMode;
   setGameMode: (mode: GameMode) => void;
@@ -28,6 +35,8 @@ interface GameContextType {
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
   config: GameConfig;
   updateConfig: (updates: Partial<GameConfig>) => void;
+  whoAmIConfig: WhoAmIConfig;
+  updateWhoAmIConfig: (updates: Partial<WhoAmIConfig>) => void;
   currentPlayerIndex: number;
   setCurrentPlayerIndex: (index: number) => void;
   playedQuestionIds: string[];
@@ -36,6 +45,7 @@ interface GameContextType {
   compartilharQuestions: Record<string, Question[]>;
   torreQuestions: Question[];
   teologicoQuestions: Question[];
+  whoAmICards: WhoAmICard[];
   isSyncingQuestions: boolean;
 
   // Helpers to manage state transitions
@@ -43,6 +53,7 @@ interface GameContextType {
   addPlayer: (name: string) => boolean;
   removePlayer: (id: string) => void;
   handleAnswer: (isCorrect: boolean) => void;
+  handleWhoAmIAnswer: (points: number) => void;
   nextTurn: () => void;
 }
 
@@ -55,18 +66,27 @@ const defaultGameConfig: GameConfig = {
   includeLowerLevels: false,
 };
 
+const defaultWhoAmIConfig: WhoAmIConfig = {
+  targetPoints: 20,
+  timerEnabled: false,
+  timerBase: 30,
+  selectedCategories: [],
+};
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [gameMode, setGameMode] = useState<GameMode>('compartilhar');
   const [players, setPlayers] = useState<Player[]>([]);
   const [config, setConfig] = useState<GameConfig>(defaultGameConfig);
+  const [whoAmIConfig, setWhoAmIConfig] = useState<WhoAmIConfig>(defaultWhoAmIConfig);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
   const [playedQuestionIds, setPlayedQuestionIds] = useState<string[]>([]);
   const [quizQuestions, setQuizQuestions] = useState<Record<string, Question[]>>(QUIZ_QUESTIONS);
   const [compartilharQuestions, setCompartilharQuestions] = useState<Record<string, Question[]>>(COMPARTILHAR_QUESTIONS);
   const [torreQuestions, setTorreQuestions] = useState<Question[]>(TORRE_QUESTIONS);
   const [teologicoQuestions, setTeologicoQuestions] = useState<Question[]>(TEOLOGICO_QUESTIONS);
+  const [whoAmICards, setWhoAmICards] = useState<WhoAmICard[]>(WHO_AM_I_CARDS);
   const [isSyncingQuestions, setIsSyncingQuestions] = useState<boolean>(false);
 
   useEffect(() => {
@@ -77,6 +97,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setCompartilharQuestions(local.compartilhar);
       setTorreQuestions(local.torre);
       setTeologicoQuestions(local.teologico);
+      if (local.whoAmI.length > 0) setWhoAmICards(local.whoAmI);
 
       // 2. Try fetching from Sheets in background
       setIsSyncingQuestions(true);
@@ -86,6 +107,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setCompartilharQuestions(updated.compartilhar);
         setTorreQuestions(updated.torre);
         setTeologicoQuestions(updated.teologico);
+        if (updated.whoAmI.length > 0) setWhoAmICards(updated.whoAmI);
         // console.log('[GameProvider] Synced latest questions successfully.');
       } catch (err) {
         // console.log('[GameProvider] Cloud sync not updated:', (err as Error).message);
@@ -99,6 +121,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const updateConfig = (updates: Partial<GameConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
+  };
+
+  const updateWhoAmIConfig = (updates: Partial<WhoAmIConfig>) => {
+    setWhoAmIConfig(prev => ({ ...prev, ...updates }));
   };
 
   const resetGame = () => {
@@ -138,6 +164,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  // Quem Sou Eu?: award variable points (at least 1) to current player
+  const handleWhoAmIAnswer = (points: number) => {
+    const awarded = Math.max(1, points);
+    setPlayers(prev =>
+      prev.map((player, index) =>
+        index === currentPlayerIndex
+          ? { ...player, points: player.points + awarded }
+          : player
+      )
+    );
+  };
+
   const nextTurn = () => {
     if (players.length === 0) return;
     setCurrentPlayerIndex(prev => (prev + 1) % players.length);
@@ -152,6 +190,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setPlayers,
         config,
         updateConfig,
+        whoAmIConfig,
+        updateWhoAmIConfig,
         currentPlayerIndex,
         setCurrentPlayerIndex,
         playedQuestionIds,
@@ -160,11 +200,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         compartilharQuestions,
         torreQuestions,
         teologicoQuestions,
+        whoAmICards,
         isSyncingQuestions,
         resetGame,
         addPlayer,
         removePlayer,
         handleAnswer,
+        handleWhoAmIAnswer,
         nextTurn,
       }}
     >

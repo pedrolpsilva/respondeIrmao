@@ -57,6 +57,19 @@ export default function HelpScreen() {
               <Text style={styles.rule}>• Classificação das perguntas: 30 fáceis, 30 médias, 30 difíceis e 10 muito difíceis.</Text>
             </View>
           </View>
+
+          <View style={styles.section}>
+            <View style={[styles.badge, { backgroundColor: Colors.purple }]}>
+              <Text style={styles.badgeText}>Quem Sou Eu?</Text>
+            </View>
+            <View style={styles.card}>
+              <Text style={styles.rule}>• Jogo de adivinhação em grupo por rodadas e dicas numeradas.</Text>
+              <Text style={styles.rule}>• O valor em pontos da palavra é igual ao número de dicas ainda não reveladas.</Text>
+              <Text style={styles.rule}>• Em sua vez, o jogador escolhe um número de dica ainda fechado, lê e tenta adivinhar ou passa a vez.</Text>
+              <Text style={styles.rule}>• Se a vez passar, o valor em pontos da palavra diminui em 1. Se todas as dicas forem reveladas, o acerto vale 1 ponto.</Text>
+              <Text style={styles.rule}>• O primeiro jogador a alcançar o limite de pontuação configurado (20, 30 ou 40 pts) vence o jogo.</Text>
+            </View>
+          </View>
         </ScrollView>
       </View>
     </SafeAreaView>

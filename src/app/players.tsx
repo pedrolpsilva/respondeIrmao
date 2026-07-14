@@ -12,7 +12,7 @@ import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, T
 
 export default function PlayersScreen() {
   const router = useRouter();
-  const { players, addPlayer, removePlayer } = useGame();
+  const { players, addPlayer, removePlayer, gameMode } = useGame();
   const { showAlert } = useModal();
   const [playerName, setPlayerName] = useState('');
   const [inputError, setInputError] = useState(false);
@@ -52,7 +52,11 @@ export default function PlayersScreen() {
       });
       return;
     }
-    router.push('/config');
+    if (gameMode === 'quem-sou-eu') {
+      router.push('/quem-sou-eu-config');
+    } else {
+      router.push('/config');
+    }
   };
 
   return (

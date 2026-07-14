@@ -6,7 +6,7 @@ import { Pressable, StyleProp, StyleSheet, Text, TextStyle, Vibration, View, Vie
 interface BrutalButtonProps {
   children: React.ReactNode | string;
   onPress?: () => void;
-  variant?: 'primary' | 'secondary' | 'accent1' | 'accent2' | 'surface';
+  variant?: 'primary' | 'secondary' | 'accent1' | 'accent2' | 'surface' | 'purple';
   size?: 'small' | 'medium' | 'large';
   fullWidth?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -34,6 +34,7 @@ export default function BrutalButton({
       case 'accent1': return Colors.accent1;
       case 'accent2': return Colors.accent2;
       case 'surface': return Colors.surface;
+      case 'purple': return Colors.purple;
       default: return Colors.primary;
     }
   };

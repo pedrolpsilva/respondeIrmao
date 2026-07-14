@@ -53,6 +53,8 @@ export default function RootLayout() {
             <Stack.Screen name="config" />
             <Stack.Screen name="game" />
             <Stack.Screen name="torre" />
+            <Stack.Screen name="quem-sou-eu-config" />
+            <Stack.Screen name="quem-sou-eu-game" />
             <Stack.Screen name="results" />
             <Stack.Screen name="about" />
             <Stack.Screen name="help" />

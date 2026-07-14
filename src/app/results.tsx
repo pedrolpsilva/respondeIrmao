@@ -9,7 +9,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const { players, resetGame } = useGame();
+  const { players, resetGame, gameMode } = useGame();
 
   const sortedPlayers = useMemo(() => {
     return [...players].sort((a, b) => b.points - a.points);
@@ -20,7 +20,11 @@ export default function ResultsScreen() {
 
   const handleRestart = () => {
     resetGame();
-    router.replace('/players');
+    if (gameMode === 'quem-sou-eu') {
+      router.replace('/quem-sou-eu-config');
+    } else {
+      router.replace('/players');
+    }
   };
 
   const handleExit = () => {
