@@ -82,9 +82,12 @@ export default function GameScreen() {
     const pool = getQuestionPool();
     if (pool.length === 0) return;
 
+    const playedGlobalSet = new Set(playedQuestionIds);
+    const playedByMeSet = new Set(currentPlayer?.playedIds || []);
+
     let available = pool.filter(q => {
-      const alreadyPlayedGlobal = playedQuestionIds.includes(q.id);
-      const alreadyPlayedByMe = currentPlayer?.playedIds?.includes(q.id);
+      const alreadyPlayedGlobal = playedGlobalSet.has(q.id);
+      const alreadyPlayedByMe = playedByMeSet.has(q.id);
 
       if (forceResetRepeated) return true;
       if (!config.repeatOtherPlayers && alreadyPlayedGlobal) return false;

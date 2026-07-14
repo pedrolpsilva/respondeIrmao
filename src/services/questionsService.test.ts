@@ -1,4 +1,37 @@
-import { parseCsvRows } from './questionsService';
+import { parseCsvRows, normalizeLevelKey } from './questionsService';
+
+describe('normalizeLevelKey', () => {
+  it('should remove "Compartilhamento - " prefix and trim', () => {
+    expect(normalizeLevelKey('Compartilhamento - Comunhao')).toBe('comunhao');
+    expect(normalizeLevelKey('Compartilhamento -  Amor ')).toBe('amor');
+    expect(normalizeLevelKey('compartilhamento - Test')).toBe('test');
+  });
+
+  it('should remove "Quiz - " prefix and trim', () => {
+    expect(normalizeLevelKey('Quiz - Multidão')).toBe('multidao');
+    expect(normalizeLevelKey('Quiz -  Test ')).toBe('test');
+    expect(normalizeLevelKey('quiz - test')).toBe('test');
+  });
+
+  it('should remove accents and normalize to lowercase', () => {
+    expect(normalizeLevelKey('Multidão')).toBe('multidao');
+    expect(normalizeLevelKey('Coração')).toBe('coracao');
+    expect(normalizeLevelKey('ÁÉÍÓÚáéíóú')).toBe('aeiouaeiou');
+    expect(normalizeLevelKey('ÂÊÎÔÛâêîôû')).toBe('aeiouaeiou');
+    expect(normalizeLevelKey('ÀÈÌÒÙàèìòù')).toBe('aeiouaeiou');
+    expect(normalizeLevelKey('ÃÕãõ')).toBe('aoao');
+  });
+
+  it('should combine all normalizations', () => {
+    expect(normalizeLevelKey('Compartilhamento - Crianças')).toBe('criancas');
+    expect(normalizeLevelKey('Quiz - Missões')).toBe('missoes');
+  });
+
+  it('should handle strings without prefixes', () => {
+    expect(normalizeLevelKey('Test')).toBe('test');
+    expect(normalizeLevelKey('  Spaces  ')).toBe('spaces');
+  });
+});
 
 describe('parseCsvRows', () => {
   it('should parse simple CSV with comma separated values', () => {
