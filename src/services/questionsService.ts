@@ -79,7 +79,7 @@ export function parseCsvRows(csvText: string): string[][] {
  * E.g., "Compartilhamento - Comunhao" -> "comunhao"
  * E.g., "Quiz - Multidão" -> "multidao"
  */
-function normalizeLevelKey(name: string): string {
+export function normalizeLevelKey(name: string): string {
   return name
     .replace(/^Compartilhamento\s*-\s*/i, '')
     .replace(/^Quiz\s*-\s*/i, '')

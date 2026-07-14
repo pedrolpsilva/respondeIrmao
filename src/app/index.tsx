@@ -35,6 +35,9 @@ export default function HomeScreen() {
       return;
     }
 
+    const sanitizedName = feedbackName.trim().substring(0, 100).replace(/[<>]/g, '');
+    const sanitizedFeedback = feedbackComment.substring(0, 1000).replace(/[<>]/g, '');
+
     try {
       const serviceId = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID;
       const templateId = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
@@ -50,8 +53,8 @@ export default function HomeScreen() {
           template_id: templateId,
           user_id: publicKey,
           template_params: {
-            name: feedbackName.trim() || 'Irmão Anônimo',
-            feedback: feedbackComment,
+            name: sanitizedName || 'Irmão Anônimo',
+            feedback: sanitizedFeedback,
           },
         }),
       })
