@@ -1,6 +1,6 @@
 import { questionsService } from '../questionsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS, TORRE_QUESTIONS } from '@/constants/questions';
+import { COMPARTILHAR_QUESTIONS, QUIZ_QUESTIONS, TORRE_QUESTIONS, TEOLOGICO_QUESTIONS } from '@/constants/questions';
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -25,16 +25,18 @@ describe('questionsService', () => {
       const result = await questionsService.loadLocalQuestions();
 
       // Verify AsyncStorage.getItem was called for all keys
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:quiz_questions');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:compartilhar_questions');
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:torre_questions');
+      expect(AsyncStorage.getItem).toHaveBeenCalledWith('@respondeirmao:teologico_questions');
 
       // Verify it returns the default questions
       expect(result).toEqual({
         quiz: QUIZ_QUESTIONS,
         compartilhar: COMPARTILHAR_QUESTIONS,
         torre: TORRE_QUESTIONS,
+        teologico: TEOLOGICO_QUESTIONS,
       });
 
       // Verify the error was logged
@@ -54,6 +56,9 @@ describe('questionsService', () => {
       const mockTorre = [
         { id: 't1', text: 'T1', correctAnswer: 'T', wrongAnswers: ['W'], level: 'facil' }
       ];
+      const mockTeologico = [
+        { id: 'teo1', text: 'Teo1', correctAnswer: 'Teo', level: 'teologico' }
+      ];
 
       (AsyncStorage.getItem as jest.Mock).mockImplementation((key) => {
         if (key === '@respondeirmao:quiz_questions') {
@@ -65,17 +70,21 @@ describe('questionsService', () => {
         if (key === '@respondeirmao:torre_questions') {
           return Promise.resolve(JSON.stringify(mockTorre));
         }
+        if (key === '@respondeirmao:teologico_questions') {
+          return Promise.resolve(JSON.stringify(mockTeologico));
+        }
         return Promise.resolve(null);
       });
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
 
       expect(result).toEqual({
         quiz: mockQuiz,
         compartilhar: mockCompartilhar,
         torre: mockTorre,
+        teologico: mockTeologico,
       });
     });
 
@@ -84,12 +93,13 @@ describe('questionsService', () => {
 
       const result = await questionsService.loadLocalQuestions();
 
-      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(3);
+      expect(AsyncStorage.getItem).toHaveBeenCalledTimes(4);
 
       expect(result).toEqual({
         quiz: QUIZ_QUESTIONS,
         compartilhar: COMPARTILHAR_QUESTIONS,
         torre: TORRE_QUESTIONS,
+        teologico: TEOLOGICO_QUESTIONS,
       });
     });
   });
