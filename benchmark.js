@@ -1,35 +1,58 @@
 const { performance } = require('perf_hooks');
 
-const players = [
-  { id: '1', name: 'Alice', points: 50 },
-  { id: '2', name: 'Bob', points: 30 },
-  { id: '3', name: 'Charlie', points: 80 },
-  { id: '4', name: 'Diana', points: 10 },
-  { id: '5', name: 'Eve', points: 90 },
-];
+const POOL_SIZE = 10000;
+const PLAYED_SIZE = 5000;
 
-const ITERATIONS = 100000;
+const pool = Array.from({ length: POOL_SIZE }, (_, i) => ({ id: `q_${i}` }));
+const playedQuestionIds = Array.from({ length: PLAYED_SIZE }, (_, i) => `q_${i * 2}`);
+const playedIdsByMe = Array.from({ length: PLAYED_SIZE / 2 }, (_, i) => `q_${i * 4}`);
 
-// BASELINE
-const startBaseline = performance.now();
-let resultBaseline;
-for (let i = 0; i < ITERATIONS; i++) {
-  resultBaseline = [...players].sort((a, b) => b.points - a.points);
+const config = {
+  repeatOtherPlayers: false,
+  repeatSamePlayer: false
+};
+
+const forceResetRepeated = false;
+
+function testIncludes() {
+  const start = performance.now();
+  for (let i = 0; i < 100; i++) {
+    const available = pool.filter(q => {
+      const alreadyPlayedGlobal = playedQuestionIds.includes(q.id);
+      const alreadyPlayedByMe = playedIdsByMe.includes(q.id);
+
+      if (forceResetRepeated) return true;
+      if (!config.repeatOtherPlayers && alreadyPlayedGlobal) return false;
+      if (!config.repeatSamePlayer && alreadyPlayedByMe) return false;
+      return true;
+    });
+  }
+  const end = performance.now();
+  return end - start;
 }
-const endBaseline = performance.now();
-const baselineTime = endBaseline - startBaseline;
 
-// OPTIMIZED (memoized)
-const startOptimized = performance.now();
-let resultOptimized;
-// simulate useMemo running once when dependencies change
-const memoizedResult = [...players].sort((a, b) => b.points - a.points);
-for (let i = 0; i < ITERATIONS; i++) {
-  resultOptimized = memoizedResult;
+function testSet() {
+  const start = performance.now();
+  for (let i = 0; i < 100; i++) {
+    const playedGlobalSet = new Set(playedQuestionIds);
+    const playedByMeSet = new Set(playedIdsByMe);
+    const available = pool.filter(q => {
+      const alreadyPlayedGlobal = playedGlobalSet.has(q.id);
+      const alreadyPlayedByMe = playedByMeSet.has(q.id);
+
+      if (forceResetRepeated) return true;
+      if (!config.repeatOtherPlayers && alreadyPlayedGlobal) return false;
+      if (!config.repeatSamePlayer && alreadyPlayedByMe) return false;
+      return true;
+    });
+  }
+  const end = performance.now();
+  return end - start;
 }
-const endOptimized = performance.now();
-const optimizedTime = endOptimized - startOptimized;
 
-console.log(`Baseline (sorting every render): ${baselineTime.toFixed(2)} ms`);
-console.log(`Optimized (useMemo): ${optimizedTime.toFixed(2)} ms`);
-console.log(`Improvement: ${((baselineTime - optimizedTime) / baselineTime * 100).toFixed(2)}% faster`);
+const timeIncludes = testIncludes();
+const timeSet = testSet();
+
+console.log(`Array.includes approach: ${timeIncludes.toFixed(2)} ms`);
+console.log(`Set.has approach: ${timeSet.toFixed(2)} ms`);
+console.log(`Speedup: ${(timeIncludes / timeSet).toFixed(2)}x`);
