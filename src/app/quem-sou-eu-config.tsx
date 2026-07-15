@@ -1,5 +1,6 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
+import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { useRouter } from 'expo-router';
@@ -90,6 +91,9 @@ export default function QuemSouEuConfigScreen() {
         <BrutalHeader title="Quem Sou Eu?" />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+          {/* Banner AdMob */}
+          {/* <ConfigBannerAd /> */}
 
           <View style={styles.headerInfo}>
             <Text style={styles.subtitle}>Configure a partida bíblica 🕊️</Text>

@@ -5,10 +5,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import mobileAds from 'react-native-google-mobile-ads';
 
 import { Colors } from '@/constants/theme';
 import { GameProvider } from '@/hooks/useGameContext';
-
 import { ModalProvider } from '@/hooks/useModal';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -21,6 +21,18 @@ export default function RootLayout() {
     DMSans_500Medium,
     DMSans_700Bold,
   });
+
+  useEffect(() => {
+    // Initialize Google Mobile Ads SDK
+    mobileAds()
+      .initialize()
+      .then(adapterStatuses => {
+        console.log('[AdMob] Initialization complete:', adapterStatuses);
+      })
+      .catch(err => {
+        console.warn('[AdMob] Initialization failed:', err);
+      });
+  }, []);
 
   useEffect(() => {
     if (error) throw error;

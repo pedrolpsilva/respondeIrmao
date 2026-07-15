@@ -4,6 +4,7 @@ import QuestionCard from '@/components/ui/QuestionCard';
 import { Question } from '@/constants/questions';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { useGameInterstitial } from '@/hooks/useGameInterstitial';
 import { playSoundPreset, stopAllSounds, playClickSound } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
 import { Check, Medal, Volume2, VolumeX, X } from 'lucide-react-native';
@@ -12,6 +13,7 @@ import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View }
 
 export default function GameScreen() {
   const router = useRouter();
+  const { showAdThenNavigate, adLoaded } = useGameInterstitial();
   const {
     gameMode,
     players,
@@ -183,7 +185,13 @@ export default function GameScreen() {
   const checkWinCondition = () => {
     const winner = players.find(p => p.points >= config.targetPoints);
     if (winner) {
-      router.replace('/results');
+      console.log(`[Game] 🏆 Condição de vitória atingida! Vencedor: ${winner.name} (${winner.points} pontos)`);
+      // console.log(`[Game] 📺 Preparando exibição do interstitial (adLoaded=${adLoaded})...`);
+      // showAdThenNavigate(() => {
+      //   console.log('[Game] ✅ Navegando para /results após o anúncio');
+      //   router.replace('/results');
+      // });
+      router.replace('/results'); // remover esta linha ao restaurar os anúncios
       return true;
     }
     return false;

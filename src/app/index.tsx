@@ -175,6 +175,14 @@ export default function HomeScreen() {
           </BrutalButton>
 
           <BrutalButton
+            variant="purple"
+            fullWidth={true}
+            onPress={handleStartQuemSouEu}
+          >
+            QUEM SOU EU?
+          </BrutalButton>
+
+          <BrutalButton
             variant="secondary"
             fullWidth={true}
             onPress={() => {
@@ -186,14 +194,6 @@ export default function HomeScreen() {
           >
             TORRE DE BABEL (solo)
           </BrutalButton>
-
-          <BrutalButton
-            variant="purple"
-            fullWidth={true}
-            onPress={handleStartQuemSouEu}
-          >
-            QUEM SOU EU?
-          </BrutalButton>
         </View>
 
         <View style={styles.footerActionsTwo}>
@@ -201,7 +201,7 @@ export default function HomeScreen() {
             <View style={styles.halfWidth}>
               <BrutalButton
                 variant="primary"
-                size="medium"
+                size="small"
                 onPress={() => router.push('/help')}
               >
                 Ajuda
@@ -210,7 +210,7 @@ export default function HomeScreen() {
             <View style={styles.halfWidth}>
               <BrutalButton
                 variant="primary"
-                size="medium"
+                size="small"
                 onPress={() => router.push('/about')}
               >
                 Sobre
@@ -221,7 +221,7 @@ export default function HomeScreen() {
           <View style={styles.feedbackSection}>
             <BrutalButton
               variant="primary"
-              size="medium"
+              size="small"
               onPress={() => setFeedbackVisible(true)}
             >
               Feedback

@@ -1,6 +1,7 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import BrutalInput from '@/components/ui/BrutalInput';
+import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import PlayerChip from '@/components/ui/PlayerChip';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
@@ -68,6 +69,9 @@ export default function PlayersScreen() {
         <View style={styles.inner}>
 
           <BrutalHeader title="Quem vai jogar?" />
+
+          {/* Banner AdMob */}
+          {/* <ConfigBannerAd /> */}
 
           {/* Input + Add Row */}
           <View style={styles.inputRow}>
