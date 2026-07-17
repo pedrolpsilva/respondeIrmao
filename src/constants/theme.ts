@@ -49,3 +49,5 @@ export const Spacing = {
 } as const;
 
 export const MaxContentWidth = 500;
+export const MaxContentWidthTablet = 900;
+export const TabletBreakpoint = 768;

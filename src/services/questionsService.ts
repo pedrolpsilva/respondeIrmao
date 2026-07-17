@@ -1,11 +1,13 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabaseClient';
 
 const STORAGE_KEY_QUIZ = '@respondeirmao:quiz_questions';
 const STORAGE_KEY_COMPARTILHAR = '@respondeirmao:compartilhar_questions';
 const STORAGE_KEY_TORRE = '@respondeirmao:torre_questions';
 const STORAGE_KEY_TEOLOGICO = '@respondeirmao:teologico_questions';
 const STORAGE_KEY_WHO_AM_I = '@respondeirmao:who_am_i_cards';
+const STORAGE_KEY_NAMES = '@respondeirmao:random_names';
 
 const SPREADSHEET_PUBHTML_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pubhtml';
 const SPREADSHEET_CSV_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pub';
@@ -117,6 +119,21 @@ export interface CachedQuestions {
   torre: Question[];
   teologico: Question[];
   whoAmI: WhoAmICard[];
+  names: string[];
+}
+
+function getStepKeyForSheet(sheetName: string): string | null {
+  if (sheetName === 'Nomes') return 'nomes';
+  if (sheetName === 'Quiz - Multidão') return 'quiz_multidao';
+  if (sheetName === 'Quiz - Discipulo') return 'quiz_discipulo';
+  if (sheetName === 'Quiz - Apostolo') return 'quiz_apostolo';
+  if (sheetName === 'Quiz Teologico') return 'quiz_teologico';
+  if (sheetName === 'Compartilhamento - Comunhao') return 'compartilhar_comunhao';
+  if (sheetName === 'Compartilhamento - Testemunho') return 'compartilhar_testemunho';
+  if (sheetName === 'Compartilhamento - Confissao') return 'compartilhar_confissao';
+  if (sheetName === 'Torre de Babel') return 'torre';
+  if (sheetName === 'Quem Sou Eu') return 'who_am_i';
+  return null;
 }
 
 export const questionsService = {
@@ -125,12 +142,13 @@ export const questionsService = {
    */
   async loadLocalQuestions(): Promise<CachedQuestions> {
     try {
-      const [quizJson, compartilharJson, torreJson, teologicoJson, whoAmIJson] = await Promise.all([
+      const [quizJson, compartilharJson, torreJson, teologicoJson, whoAmIJson, namesJson] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEY_QUIZ),
         AsyncStorage.getItem(STORAGE_KEY_COMPARTILHAR),
         AsyncStorage.getItem(STORAGE_KEY_TORRE),
         AsyncStorage.getItem(STORAGE_KEY_TEOLOGICO),
         AsyncStorage.getItem(STORAGE_KEY_WHO_AM_I),
+        AsyncStorage.getItem(STORAGE_KEY_NAMES),
       ]);
 
       const quiz = quizJson ? JSON.parse(quizJson) : QUIZ_QUESTIONS;
@@ -138,8 +156,9 @@ export const questionsService = {
       const torre = torreJson ? JSON.parse(torreJson) : TORRE_QUESTIONS;
       const teologico = teologicoJson ? JSON.parse(teologicoJson) : TEOLOGICO_QUESTIONS;
       const whoAmI = whoAmIJson ? JSON.parse(whoAmIJson) : WHO_AM_I_CARDS;
+      const names = namesJson ? JSON.parse(namesJson) : [];
 
-      return { quiz, compartilhar, torre, teologico, whoAmI };
+      return { quiz, compartilhar, torre, teologico, whoAmI, names };
     } catch (error) {
       console.error('[QuestionsService] Failed to read local cache:', error);
       return {
@@ -148,168 +167,146 @@ export const questionsService = {
         torre: TORRE_QUESTIONS,
         teologico: TEOLOGICO_QUESTIONS,
         whoAmI: WHO_AM_I_CARDS,
+        names: [],
       };
     }
   },
 
   /**
-   * Connects to Google Sheets, downloads all matching sheets and stores them safely.
+   * Connects to Supabase, downloads all matching tables and stores them safely.
    * Returns the new fully mapped question sets if successful.
    * Rejects if syncing failed, adhering to "não substitua a memória atual" policy.
    */
-  async fetchAndSyncQuestions(): Promise<CachedQuestions> {
-    // console.log('[QuestionsService] Starting background sync from Google Sheets...');
+  async fetchAndSyncQuestions(
+    onStepUpdate?: (stepKey: string, status: 'loading' | 'success' | 'error') => void
+  ): Promise<CachedQuestions> {
+    const current = await this.loadLocalQuestions();
+    const newQuiz = { ...current.quiz };
+    const newCompartilhar = { ...current.compartilhar };
+    let newTorre = [ ...current.torre ];
+    let newTeologico = [ ...current.teologico ];
+    let newWhoAmI = [ ...current.whoAmI ];
+    let newNomes = [ ...current.names ];
 
-    const response = await fetch(SPREADSHEET_PUBHTML_URL, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
+    const syncSteps = [
+      { stepKey: 'nomes', table: 'nomes' },
+      { stepKey: 'quiz_multidao', table: 'quiz_multidao' },
+      { stepKey: 'quiz_discipulo', table: 'quiz_discipulo' },
+      { stepKey: 'quiz_apostolo', table: 'quiz_apostolo' },
+      { stepKey: 'quiz_teologico', table: 'quiz_teologico' },
+      { stepKey: 'compartilhar_comunhao', table: 'compartilhamento_comunhao' },
+      { stepKey: 'compartilhar_testemunho', table: 'compartilhamento_testemunho' },
+      { stepKey: 'compartilhar_confissao', table: 'compartilhamento_confissao' },
+      { stepKey: 'torre', table: 'torre_de_babel' },
+      { stepKey: 'who_am_i', table: 'quem_sou_eu' },
+    ];
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch spreadsheet pubhtml, status: ${response.status}`);
+    if (onStepUpdate) {
+      syncSteps.forEach(step => onStepUpdate(step.stepKey, 'loading'));
     }
-
-    const html = await response.text();
-    const sheetItems = extractSheetItems(html);
-
-    if (sheetItems.length === 0) {
-      throw new Error('No sheets found in the spreadsheet HTML payload.');
-    }
-
-    const newQuiz: Record<string, Question[]> = { ...QUIZ_QUESTIONS };
-    const newCompartilhar: Record<string, Question[]> = { ...COMPARTILHAR_QUESTIONS };
-    let newTorre: Question[] = [ ...TORRE_QUESTIONS ];
-    let newTeologico: Question[] = [ ...TEOLOGICO_QUESTIONS ];
-    let newWhoAmI: WhoAmICard[] = [ ...WHO_AM_I_CARDS ];
-
-    // Process all matched sheets concurrently
-    const sheetPromises = sheetItems.map(async (item) => {
-      const isCompartilhar = item.name.startsWith('Compartilhamento - ');
-      const isQuiz = item.name.startsWith('Quiz - ');
-      const isTorre = item.name === 'Torre de Babel';
-      const isTeologico = item.name === 'Quiz Teologico';
-      const isWhoAmI = item.name === 'Quem Sou Eu';
-
-      if (!isCompartilhar && !isQuiz && !isTorre && !isTeologico && !isWhoAmI) {
-        return null; // Ignore sheets we don't use
-      }
-
-      const levelKey = normalizeLevelKey(item.name);
-      const csvUrl = `${SPREADSHEET_CSV_BASE_URL}?output=csv&gid=${item.gid}`;
-
-      // console.log(`[QuestionsService] Fetching CSV for ${item.name} (gid: ${item.gid})`);
-
-      try {
-        const csvResponse = await fetch(csvUrl, { headers: { 'Cache-Control': 'no-cache' } });
-        if (!csvResponse.ok) {
-          console.warn(`[QuestionsService] Failed downloading sheet: ${item.name}`);
-          return null; // Skip this specific sheet but could proceed or fail entirely?
-        }
-
-        const csvText = await csvResponse.text();
-
-        const parsedRows = parseCsvRows(csvText);
-        // console.log(`[QuestionsService] Parsed ${parsedRows.length} rows for ${item.name}`);
-
-        // Skip updating if the sheet exists but is empty
-        if (parsedRows.length === 0) {
-          // console.log(`[QuestionsService] Sheet ${item.name} is currently empty. Skipping override.`);
-          return null;
-        }
-
-        // Map rows into Question model format
-        const mappedQuestions: Question[] = parsedRows.map((row, index) => {
-          if (isQuiz) {
-            // Quiz: A=Question, B=Separator, C=Answer
-            return {
-              id: `remote_${levelKey}_${index}`,
-              text: row[0] || '',
-              correctAnswer: row[2] || '',
-              level: levelKey,
-            };
-          } else if (isTeologico) {
-            // Quiz Teologico: A=Question, B=Separator, C=Answer
-            return {
-              id: `remote_teologico_${index}`,
-              text: row[0] || '',
-              correctAnswer: row[2] || '',
-              level: 'teologico',
-            };
-          } else if (isCompartilhar) {
-            // Compartilhamento: A=Question
-            return {
-              id: `remote_${levelKey}_${index}`,
-              text: row[0] || '',
-              level: levelKey,
-            };
-          } else if (isWhoAmI) {
-            // Quem Sou Eu: A=Answer, B=Category, C-Z=Hints (skip empty columns)
-            const hints = row.slice(2).filter(h => h.trim().length > 0);
-            return {
-              id: `remote_whoami_${index}`,
-              answer: row[0] || '',
-              category: row[1] || '',
-              hints,
-            } as unknown as Question; // Cast: will be post-processed below
-          } else {
-            // Torre de Babel: A=Question, B=Correct Answer, C, D, E=Wrong Answers, F=Bible Reference
-            let level = 'facil';
-            if (index >= 90) level = 'muito_dificil';
-            else if (index >= 60) level = 'dificil';
-            else if (index >= 30) level = 'media';
-
-            return {
-              id: `remote_torre_${index}`,
-              text: row[0] || '',
-              correctAnswer: row[1] || '',
-              wrongAnswers: [row[2] || '', row[3] || '', row[4] || ''].filter(Boolean),
-              bibleReference: row[5] || '',
-              level,
-            };
-          }
-        });
-
-        return { isQuiz, isCompartilhar, isTorre, isTeologico, isWhoAmI, levelKey, mappedQuestions };
-      } catch (error) {
-        console.warn(`[QuestionsService] Error fetching sheet ${item.name}:`, error);
-        return null;
-      }
-    });
-
-    const results = await Promise.all(sheetPromises);
 
     let hasUpdates = false;
-    for (const result of results) {
-      if (!result) continue;
 
-      if (result.isQuiz) {
-        newQuiz[result.levelKey] = result.mappedQuestions;
-      } else if (result.isCompartilhar) {
-        newCompartilhar[result.levelKey] = result.mappedQuestions;
-      } else if (result.isTorre) {
-        newTorre = result.mappedQuestions;
-      } else if (result.isTeologico) {
-        newTeologico = result.mappedQuestions;
-      } else if (result.isWhoAmI) {
-        // Cast back to WhoAmICard[] (we used Question as a carrier type above)
-        newWhoAmI = result.mappedQuestions as unknown as WhoAmICard[];
+    // Process all tables in parallel
+    const promises = syncSteps.map(async ({ stepKey, table }) => {
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .order('id', { ascending: true });
+
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error(`No data returned for table: ${table}`);
+        }
+
+        if (stepKey === 'nomes') {
+          newNomes = data
+            .map((row: any) => (row.nome || '').trim())
+            .filter((name: string) => name.length > 0 && name.toLowerCase() !== 'nome' && name.toLowerCase() !== 'nomes');
+        } else if (stepKey === 'quiz_teologico') {
+          newTeologico = data.map((row: any) => ({
+            id: `remote_teologico_${row.id}`,
+            text: row.pergunta || '',
+            correctAnswer: row.resposta || '',
+            level: 'teologico',
+          }));
+        } else if (stepKey.startsWith('quiz_')) {
+          const levelKey = stepKey.replace('quiz_', '');
+          newQuiz[levelKey] = data.map((row: any) => ({
+            id: `remote_${levelKey}_${row.id}`,
+            text: row.pergunta || '',
+            correctAnswer: row.resposta || '',
+            level: levelKey,
+          }));
+        } else if (stepKey.startsWith('compartilhar_')) {
+          const levelKey = stepKey.replace('compartilhar_', '');
+          newCompartilhar[levelKey] = data.map((row: any) => ({
+            id: `remote_${levelKey}_${row.id}`,
+            text: row.pergunta || '',
+            level: levelKey,
+          }));
+        } else if (stepKey === 'torre') {
+          newTorre = data.map((row: any, idx: number) => {
+            let level = 'facil';
+            if (idx >= 90) level = 'muito_dificil';
+            else if (idx >= 60) level = 'dificil';
+            else if (idx >= 30) level = 'media';
+
+            return {
+              id: `remote_torre_${row.id}`,
+              text: row.pergunta || '',
+              correctAnswer: row.resposta_correta || '',
+              wrongAnswers: [row.resposta_incorreta_1 || '', row.resposta_incorreta_2 || '', row.resposta_incorreta_3 || ''].filter(Boolean),
+              bibleReference: row.referencia_biblica || '',
+              level,
+            };
+          });
+        } else if (stepKey === 'who_am_i') {
+          newWhoAmI = data.map((row: any) => {
+            const hints: string[] = [];
+            for (let i = 1; i <= 20; i++) {
+              const dica = row[`dica_${i}`];
+              if (dica && dica.trim().length > 0) {
+                hints.push(dica.trim());
+              }
+            }
+            return {
+              id: `remote_whoami_${row.id}`,
+              answer: row.palavra || '',
+              category: row.categoria || '',
+              hints,
+            };
+          });
+        }
+
+        if (onStepUpdate) {
+          onStepUpdate(stepKey, 'success');
+        }
+        hasUpdates = true;
+      } catch (err) {
+        console.warn(`[QuestionsService] Sync failed for ${stepKey} (${table}):`, err);
+        if (onStepUpdate) {
+          onStepUpdate(stepKey, 'error');
+        }
       }
-      hasUpdates = true;
-    }
+    });
+
+    await Promise.all(promises);
 
     if (!hasUpdates) {
-      throw new Error('Sync execution found no updateable question contents.');
+      throw new Error('Sync execution found no updateable question contents from Supabase.');
     }
 
-    // Succeeded with at least some updates! Persist them
-    // console.log('[QuestionsService] Sync successful, storing cache to device...');
     await Promise.all([
       AsyncStorage.setItem(STORAGE_KEY_QUIZ, JSON.stringify(newQuiz)),
       AsyncStorage.setItem(STORAGE_KEY_COMPARTILHAR, JSON.stringify(newCompartilhar)),
       AsyncStorage.setItem(STORAGE_KEY_TORRE, JSON.stringify(newTorre)),
       AsyncStorage.setItem(STORAGE_KEY_TEOLOGICO, JSON.stringify(newTeologico)),
       AsyncStorage.setItem(STORAGE_KEY_WHO_AM_I, JSON.stringify(newWhoAmI)),
+      AsyncStorage.setItem(STORAGE_KEY_NAMES, JSON.stringify(newNomes)),
     ]);
 
-    return { quiz: newQuiz, compartilhar: newCompartilhar, torre: newTorre, teologico: newTeologico, whoAmI: newWhoAmI };
+    return { quiz: newQuiz, compartilhar: newCompartilhar, torre: newTorre, teologico: newTeologico, whoAmI: newWhoAmI, names: newNomes };
   }
 };

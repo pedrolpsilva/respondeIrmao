@@ -4,6 +4,7 @@ import { Question, TORRE_QUESTIONS } from '@/constants/questions';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { useModal } from '@/hooks/useModal';
+import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { playSoundPreset, playClickSound } from '@/services/soundManager';
 import { useRouter } from 'expo-router';
 import { BookOpen, Check, Home, Play, RotateCcw, Trophy, Volume2, VolumeX, X } from 'lucide-react-native';
@@ -76,6 +77,7 @@ export default function TorreScreen() {
   const router = useRouter();
   const { torreQuestions } = useGame();
   const { showAlert } = useModal();
+  const { isTabletLandscape } = useTabletLandscape();
 
   // Local States
   const [currentLevel, setCurrentLevel] = useState(1);
@@ -266,12 +268,12 @@ export default function TorreScreen() {
           <View style={styles.overlayActions}>
             <BrutalButton variant="secondary" size="large" onPress={startNewRun}>
               <RotateCcw size={24} color="#FFFFFF" style={{ marginRight: 10 }} />
-              Tentar Novamente
+              <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>Tentar Novamente</Text>
             </BrutalButton>
 
             <BrutalButton variant="surface" size="large" onPress={() => router.replace('/')}>
               <Home size={24} color={Colors.text} style={{ marginRight: 10 }} />
-              Menu Principal
+              <Text style={[styles.buttonLabel, { color: Colors.text }]}>Menu Principal</Text>
             </BrutalButton>
           </View>
         </View>
@@ -306,12 +308,12 @@ export default function TorreScreen() {
           <View style={styles.overlayActions}>
             <BrutalButton variant="accent1" size="large" onPress={startNewRun}>
               <Play size={24} color="#FFFFFF" style={{ marginRight: 10 }} />
-              Jogar Novamente
+              <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>Jogar Novamente</Text>
             </BrutalButton>
 
             <BrutalButton variant="surface" size="large" onPress={() => router.replace('/')}>
               <Home size={24} color={Colors.text} style={{ marginRight: 10 }} />
-              Menu Principal
+              <Text style={[styles.buttonLabel, { color: Colors.text }]}>Menu Principal</Text>
             </BrutalButton>
           </View>
         </View>
@@ -319,118 +321,253 @@ export default function TorreScreen() {
     );
   }
 
+  const renderFloorMap = () => {
+    const floors = Array.from({ length: 100 }, (_, i) => i + 1);
+
+    return (
+      <View style={styles.mapContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.mapScrollContent}
+          ref={(ref) => {
+            if (ref && currentLevel > 4) {
+              ref.scrollTo({ x: (currentLevel - 4) * 40, animated: true });
+            }
+          }}
+        >
+          {floors.map((floor) => {
+            const isCurrent = floor === currentLevel;
+            const isPassed = floor < currentLevel;
+
+            let bg = '#FFFFFF';
+            let txt = '#000000';
+            if (isCurrent) {
+              bg = Colors.primary;
+              txt = '#FFFFFF';
+            } else if (isPassed) {
+              bg = '#22C55E';
+              txt = '#FFFFFF';
+            }
+
+            return (
+              <View
+                key={floor}
+                style={[
+                  styles.mapSquare,
+                  { backgroundColor: bg },
+                  isCurrent && styles.mapSquareCurrent,
+                ]}
+              >
+                <Text style={[styles.mapSquareText, { color: txt }, isCurrent && styles.mapSquareTextCurrent]}>
+                  {floor}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const nextButton = (
+    <View style={styles.actionContainer}>
+      <BrutalButton
+        variant={selectedChoice === currentQuestion?.correctAnswer ? 'accent1' : 'accent2'}
+        size="large"
+        onPress={handleNextPress}
+      >
+        {selectedChoice === currentQuestion?.correctAnswer ? (
+          <>
+            <Check size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>
+              {currentLevel === 100 ? 'Finalizar Torre' : 'Subir a Torre ➔'}
+            </Text>
+          </>
+        ) : (
+          <>
+            <X size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>Ver Resultado</Text>
+          </>
+        )}
+      </BrutalButton>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        {/* Customized header */}
-        <BrutalHeader
-          showBack={true}
-          onBackPress={handleExitPress}
-          title="TORRE DE BABEL"
-          transparent={true}
-          rightComponent={
-            <Pressable
-              onPress={() => {
-                playClickSound();
-                setIsSoundEnabled(!isSoundEnabled);
-              }}
-              style={styles.soundButton}
-            >
-              {isSoundEnabled ? (
-                <Volume2 color={Colors.text} size={24} />
-              ) : (
-                <VolumeX color={Colors.muted} size={24} />
-              )}
-            </Pressable>
-          }
-        />
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Level Progress Banner */}
-          <View style={styles.progressContainer}>
-            <View style={styles.levelRow}>
-              <Text style={styles.levelProgressLabel}>NÍVEL:</Text>
-              <Text style={styles.levelNumber}>{currentLevel} / 100</Text>
-              <View style={[styles.tierBadge, { backgroundColor: tierInfo.color }]}>
-                <Text style={styles.tierBadgeText}>{tierInfo.label}</Text>
+      {isTabletLandscape ? (
+        // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
+        <View style={styles.tabletWrapper}>
+          <BrutalHeader
+            showBack={false}
+            backRoute
+            title="TORRE DE BABEL"
+            transparent={true}
+            rightComponent={
+              <Pressable
+                onPress={() => {
+                  playClickSound();
+                  setIsSoundEnabled(!isSoundEnabled);
+                }}
+                style={styles.soundButton}
+              >
+                {isSoundEnabled ? (
+                  <Volume2 color={Colors.text} size={24} />
+                ) : (
+                  <VolumeX color={Colors.muted} size={24} />
+                )}
+              </Pressable>
+            }
+          />
+          {renderFloorMap()}
+          <View style={styles.tabletRow}>
+            {/* Left: level progress + action */}
+            <View style={styles.tabletLeft}>
+              <View style={styles.progressContainer}>
+                <View style={styles.levelRow}>
+                  <Text style={styles.levelProgressLabel}>NÍVEL:</Text>
+                  <Text style={styles.levelNumber}>{currentLevel} / 100</Text>
+                  <View style={[styles.tierBadge, { backgroundColor: tierInfo.color }]}>
+                    <Text style={styles.tierBadgeText}>{tierInfo.label}</Text>
+                  </View>
+                </View>
+                <View style={styles.progressBarTrack}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${currentLevel}%`, backgroundColor: tierInfo.color },
+                    ]}
+                  />
+                </View>
               </View>
-            </View>
-
-            <View style={styles.progressBarTrack}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${currentLevel}%`,
-                    backgroundColor: tierInfo.color,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* Question Card */}
-          <View style={styles.cardWrapper}>
-            <View style={styles.cardShadow} />
-            <View style={styles.cardFront}>
-              <Text style={styles.questionText}>
-                {currentQuestion?.text}
-              </Text>
-
               {isAnswered && currentQuestion?.bibleReference && (
                 <View style={styles.referenceContainer}>
                   <BookOpen size={18} color={Colors.warning} style={{ marginRight: 6 }} />
                   <Text style={styles.referenceText}>
-                    Referência: {currentQuestion.bibleReference}
+                    Refêrencia: {currentQuestion.bibleReference}
                   </Text>
                 </View>
               )}
+              <View style={{ flex: 1 }} />
+              {isAnswered && nextButton}
+            </View>
+            {/* Right: question card + choices grid 2x2 */}
+            <View style={styles.tabletRight}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                <View style={styles.cardWrapper}>
+                  <View style={styles.cardShadow} />
+                  <View style={styles.cardFront}>
+                    <Text style={styles.questionText}>{currentQuestion?.text}</Text>
+                  </View>
+                </View>
+                <View style={styles.choicesGridTablet}>
+                  {shuffledChoices.map((choice, i) => {
+                    const { bgColor, textColor } = getChoiceStyles(choice);
+                    return (
+                      <View key={`choice_${i}`} style={styles.choiceGridItem}>
+                        <ChoiceButton
+                          text={choice}
+                          bgColor={bgColor}
+                          textColor={textColor}
+                          onPress={() => handleChoicePress(choice)}
+                          disabled={isAnswered}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
             </View>
           </View>
+        </View>
+      ) : (
+        // ── PORTRAIT: original layout ────────────────────────────────────────
+        <View style={styles.inner}>
+          <BrutalHeader
+            showBack={false}
+            backRoute
+            title="TORRE DE BABEL"
+            transparent={true}
+            rightComponent={
+              <Pressable
+                onPress={() => {
+                  playClickSound();
+                  setIsSoundEnabled(!isSoundEnabled);
+                }}
+                style={styles.soundButton}
+              >
+                {isSoundEnabled ? (
+                  <Volume2 color={Colors.text} size={24} />
+                ) : (
+                  <VolumeX color={Colors.muted} size={24} />
+                )}
+              </Pressable>
+            }
+          />
+          {renderFloorMap()}
 
-          {/* Choice Buttons List */}
-          <View style={styles.choicesContainer}>
-            {shuffledChoices.map((choice, i) => {
-              const { bgColor, textColor } = getChoiceStyles(choice);
-              return (
-                <ChoiceButton
-                  key={`choice_${i}`}
-                  text={choice}
-                  bgColor={bgColor}
-                  textColor={textColor}
-                  disabled={isAnswered}
-                  onPress={() => handleChoicePress(choice)}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <View style={styles.progressContainer}>
+              <View style={styles.levelRow}>
+                <Text style={styles.levelProgressLabel}>NÍVEL:</Text>
+                <Text style={styles.levelNumber}>{currentLevel} / 100</Text>
+                <View style={[styles.tierBadge, { backgroundColor: tierInfo.color }]}>
+                  <Text style={styles.tierBadgeText}>{tierInfo.label}</Text>
+                </View>
+              </View>
+
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${currentLevel}%`,
+                      backgroundColor: tierInfo.color,
+                    },
+                  ]}
                 />
-              );
-            })}
-          </View>
-        </ScrollView>
+              </View>
+            </View>
 
-        {/* Action Button at bottom */}
-        {isAnswered && (
-          <View style={styles.actionContainer}>
-            <BrutalButton
-              variant={selectedChoice === currentQuestion?.correctAnswer ? 'accent1' : 'accent2'}
-              size="large"
-              onPress={handleNextPress}
-            >
-              {selectedChoice === currentQuestion?.correctAnswer ? (
-                <>
-                  <Check size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>
-                    {currentLevel === 100 ? 'Finalizar Torre' : 'Subir a Torre ➔'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <X size={24} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={[styles.buttonLabel, { color: '#FFFFFF' }]}>Ver Resultado</Text>
-                </>
-              )}
-            </BrutalButton>
-          </View>
-        )}
-      </View>
+            <View style={styles.cardWrapper}>
+              <View style={styles.cardShadow} />
+              <View style={styles.cardFront}>
+                <Text style={styles.questionText}>
+                  {currentQuestion?.text}
+                </Text>
+
+                {isAnswered && currentQuestion?.bibleReference && (
+                  <View style={styles.referenceContainer}>
+                    <BookOpen size={18} color={Colors.warning} style={{ marginRight: 6 }} />
+                    <Text style={styles.referenceText}>
+                      Referência: {currentQuestion.bibleReference}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.choicesContainer}>
+              {shuffledChoices.map((choice, i) => {
+                const { bgColor, textColor } = getChoiceStyles(choice);
+                return (
+                  <ChoiceButton
+                    key={`choice_${i}`}
+                    text={choice}
+                    bgColor={bgColor}
+                    textColor={textColor}
+                    disabled={isAnswered}
+                    onPress={() => handleChoicePress(choice)}
+                  />
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {isAnswered && nextButton}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -568,37 +705,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 8,
   },
-  choiceWrapper: {
-    position: 'relative',
-    width: '100%',
-    marginBottom: 8,
-  },
-  choiceShadow: {
-    position: 'absolute',
-    top: Metrics.shadowOffset,
-    left: Metrics.shadowOffset,
-    right: -Metrics.shadowOffset,
-    bottom: -Metrics.shadowOffset,
-    backgroundColor: Colors.border,
-    borderRadius: Metrics.radiusButton,
-    zIndex: 1,
-  },
-  choiceFront: {
-    zIndex: 2,
-    borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
-    borderRadius: Metrics.radiusButton,
-    minHeight: 56,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  choiceText: {
-    fontFamily: Fonts.bodyBold,
-    fontSize: 16,
-    textAlign: 'center',
-  },
   actionContainer: {
     marginTop: 16,
     alignSelf: 'stretch',
@@ -711,5 +817,105 @@ const styles = StyleSheet.create({
   overlayActions: {
     gap: 16,
     width: '100%',
+  },
+  // ── Tablet Landscape ───────────────────────────────────────────────────
+  tabletWrapper: {
+    flex: 1,
+    padding: Metrics.containerMargin,
+    width: '100%',
+    paddingBottom: 20,
+  },
+  tabletRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 20,
+  },
+  tabletLeft: {
+    flex: 4,
+    flexDirection: 'column',
+  },
+  tabletRight: {
+    flex: 6,
+    flexDirection: 'column',
+  },
+  choicesGridTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  choiceGridItem: {
+    width: '48%',
+  },
+  // ── Choice Buttons ─────────────────────────────────────────────────────
+  choiceWrapper: {
+    position: 'relative',
+    width: '100%',
+    marginBottom: 8,
+  },
+  choiceShadow: {
+    position: 'absolute',
+    top: Metrics.shadowOffset,
+    left: Metrics.shadowOffset,
+    right: -Metrics.shadowOffset,
+    bottom: -Metrics.shadowOffset,
+    backgroundColor: Colors.border,
+    borderRadius: Metrics.radiusButton,
+    zIndex: 1,
+  },
+  choiceFront: {
+    zIndex: 2,
+    borderWidth: Metrics.borderWidth,
+    borderColor: Colors.border,
+    borderRadius: Metrics.radiusButton,
+    minHeight: 56,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  choiceText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  // ── Path Map ───────────────────────────────────────────────────────────
+  mapContainer: {
+    height: 52,
+    marginBottom: 16,
+    width: '100%',
+  },
+  mapScrollContent: {
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  mapSquare: {
+    width: 34,
+    height: 34,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.border,
+    shadowOffset: { width: 1.5, height: 1.5 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
+  mapSquareCurrent: {
+    width: 42,
+    height: 42,
+    borderRadius: 8,
+    shadowOffset: { width: 2, height: 2 },
+    elevation: 3,
+  },
+  mapSquareText: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+  },
+  mapSquareTextCurrent: {
+    fontSize: 16,
   },
 });

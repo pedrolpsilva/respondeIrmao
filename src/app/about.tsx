@@ -1,6 +1,7 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import * as Application from 'expo-application';
 import { Mail } from 'lucide-react-native';
 import React from 'react';
@@ -14,10 +15,11 @@ export default function AboutScreen() {
       console.error('Erro ao abrir aplicativo de e-mail:', error);
     }
   };
+  const { isTabletLandscape } = useTabletLandscape();
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
+      <View style={[styles.inner, isTabletLandscape && styles.innerTablet]}>
         <BrutalHeader title="Sobre o Jogo" />
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
@@ -79,6 +81,9 @@ const styles = StyleSheet.create({
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
+  },
+  innerTablet: {
+    maxWidth: 720,
   },
   scrollContainer: {
     paddingBottom: 24,

@@ -35,6 +35,19 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O aplicativo precisa de acesso às suas fotos para você escolher a imagem do jogador.",
+          "cameraPermission": "O aplicativo precisa de acesso à câmera para você tirar a foto do jogador."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O aplicativo precisa de acesso à câmera para você tirar a foto do jogador."
+        }
       ]
     ],
     "experiments": {

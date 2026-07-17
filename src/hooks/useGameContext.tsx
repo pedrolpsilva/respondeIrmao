@@ -1,6 +1,7 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
 import { questionsService } from '@/services/questionsService';
 import * as Crypto from 'expo-crypto';
+import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export type GameMode = 'quiz' | 'compartilhar' | 'torre' | 'teologico' | 'quem-sou-eu';
@@ -10,6 +11,7 @@ export interface Player {
   name: string;
   points: number;
   playedIds?: string[];
+  photoUri?: string;
 }
 
 export interface GameConfig {
@@ -47,14 +49,16 @@ interface GameContextType {
   teologicoQuestions: Question[];
   whoAmICards: WhoAmICard[];
   isSyncingQuestions: boolean;
+  randomNames: string[];
 
   // Helpers to manage state transitions
   resetGame: () => void;
-  addPlayer: (name: string) => boolean;
+  addPlayer: (name: string, photoUri?: string) => boolean;
   removePlayer: (id: string) => void;
   handleAnswer: (isCorrect: boolean) => void;
   handleWhoAmIAnswer: (points: number) => void;
   nextTurn: () => void;
+  syncQuestions: (onStepUpdate?: (stepKey: string, status: 'loading' | 'success' | 'error') => void) => Promise<void>;
 }
 
 const defaultGameConfig: GameConfig = {
@@ -87,6 +91,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [torreQuestions, setTorreQuestions] = useState<Question[]>(TORRE_QUESTIONS);
   const [teologicoQuestions, setTeologicoQuestions] = useState<Question[]>(TEOLOGICO_QUESTIONS);
   const [whoAmICards, setWhoAmICards] = useState<WhoAmICard[]>(WHO_AM_I_CARDS);
+  const [randomNames, setRandomNames] = useState<string[]>([]);
   const [isSyncingQuestions, setIsSyncingQuestions] = useState<boolean>(false);
 
   useEffect(() => {
@@ -98,6 +103,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setTorreQuestions(local.torre);
       setTeologicoQuestions(local.teologico);
       if (local.whoAmI.length > 0) setWhoAmICards(local.whoAmI);
+      if (local.names.length > 0) setRandomNames(local.names);
 
       // 2. Try fetching from Sheets in background
       setIsSyncingQuestions(true);
@@ -108,6 +114,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setTorreQuestions(updated.torre);
         setTeologicoQuestions(updated.teologico);
         if (updated.whoAmI.length > 0) setWhoAmICards(updated.whoAmI);
+        if (updated.names.length > 0) setRandomNames(updated.names);
         // console.log('[GameProvider] Synced latest questions successfully.');
       } catch (err) {
         // console.log('[GameProvider] Cloud sync not updated:', (err as Error).message);
@@ -133,7 +140,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setPlayedQuestionIds([]);
   };
 
-  const addPlayer = (name: string): boolean => {
+  const addPlayer = (name: string, photoUri?: string): boolean => {
     const normalized = name.trim();
     if (!normalized) return false;
     if (players.some(p => p.name.toLowerCase() === normalized.toLowerCase())) return false;
@@ -142,6 +149,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       id: Crypto.randomUUID(),
       name: normalized,
       points: 0,
+      photoUri,
     };
 
     setPlayers(prev => [...prev, newPlayer]);
@@ -149,6 +157,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removePlayer = (id: string) => {
+    const player = players.find(p => p.id === id);
+    if (player && player.photoUri) {
+      FileSystem.deleteAsync(player.photoUri, { idempotent: true }).catch(err => {
+        console.warn('Failed to delete player photo:', err);
+      });
+    }
     setPlayers(prev => prev.filter(p => p.id !== id));
   };
 
@@ -181,6 +195,16 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setCurrentPlayerIndex(prev => (prev + 1) % players.length);
   };
 
+  const syncQuestions = async (onStepUpdate?: (stepKey: string, status: 'loading' | 'success' | 'error') => void) => {
+    const updated = await questionsService.fetchAndSyncQuestions(onStepUpdate);
+    setQuizQuestions(updated.quiz);
+    setCompartilharQuestions(updated.compartilhar);
+    setTorreQuestions(updated.torre);
+    setTeologicoQuestions(updated.teologico);
+    if (updated.whoAmI.length > 0) setWhoAmICards(updated.whoAmI);
+    if (updated.names.length > 0) setRandomNames(updated.names);
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -202,12 +226,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         teologicoQuestions,
         whoAmICards,
         isSyncingQuestions,
+        randomNames,
         resetGame,
         addPlayer,
         removePlayer,
         handleAnswer,
         handleWhoAmIAnswer,
         nextTurn,
+        syncQuestions,
       }}
     >
       {children}

@@ -3,6 +3,7 @@ import BrutalHeader from '@/components/ui/BrutalHeader';
 import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { useRouter } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -12,6 +13,7 @@ import { playClickSound } from '@/services/soundManager';
 export default function ConfigScreen() {
   const router = useRouter();
   const { gameMode, config, updateConfig, resetGame } = useGame();
+  const { isTabletLandscape } = useTabletLandscape();
 
   // Local states for UI, sync to context on Submit
   const [selectedLevel, setSelectedLevel] = useState(
@@ -73,158 +75,180 @@ export default function ConfigScreen() {
     );
   };
 
+  const levelSection = gameMode !== 'teologico' && (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>Nível de Dificuldade</Text>
+      <View style={styles.segmentedContainer}>
+        {gameMode === 'compartilhar' ? (
+          <>
+            {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, Colors.accent1)}
+            {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, Colors.warning)}
+            {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, Colors.accent2)}
+          </>
+        ) : (
+          <>
+            {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, Colors.accent1)}
+            {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, Colors.warning)}
+            {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, Colors.accent2)}
+          </>
+        )}
+      </View>
+
+      {/* include lower levels switch */}
+      <View style={[styles.toggleCard, { marginTop: 12 }]}>
+        <View style={styles.toggleTextWrapper}>
+          <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
+          <Text style={styles.toggleSubtitle}>
+            Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
+          </Text>
+        </View>
+        <Switch
+          trackColor={{ false: Colors.muted, true: Colors.primary }}
+          thumbColor={Colors.border}
+          ios_backgroundColor={Colors.muted}
+          onValueChange={setIncludeLower}
+          value={includeLower}
+        />
+      </View>
+    </View>
+  );
+
+  const scoringSection = (gameMode === 'quiz' || gameMode === 'teologico') ? (
+    <>
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Pontuação Alvo (Para Vencer)</Text>
+        <View style={styles.segmentedContainer}>
+          {renderSegment('10 pts', '10', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
+          {renderSegment('15 pts', '15', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
+          {renderSegment('20 pts', '20', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Tempo por Turno</Text>
+        <View style={styles.timerCard}>
+          <Pressable
+            onPress={() => {
+              Vibration.vibrate(10);
+              playClickSound();
+              setTimer(prev => Math.max(15, prev - 15));
+            }}
+            style={styles.timerButton}
+          >
+            <Minus color={Colors.border} size={24} strokeWidth={3} />
+          </Pressable>
+          <View style={styles.timerDisplay}>
+            <Text style={styles.timerValue}>{timer}s</Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              Vibration.vibrate(10);
+              playClickSound();
+              setTimer(prev => Math.min(120, prev + 15));
+            }}
+            style={styles.timerButton}
+          >
+            <Plus color={Colors.border} size={24} strokeWidth={3} />
+          </Pressable>
+        </View>
+      </View>
+    </>
+  ) : (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>Perguntas Repetidas</Text>
+      <View style={[styles.toggleCard, { marginBottom: 12 }]}>
+        <View style={styles.toggleTextWrapper}>
+          <Text style={styles.toggleTitle}>Para o mesmo jogador</Text>
+          <Text style={styles.toggleSubtitle}>Uma pergunta pode cair de novo para a mesma pessoa.</Text>
+        </View>
+        <Switch
+          trackColor={{ false: Colors.muted, true: Colors.primary }}
+          thumbColor={Colors.border}
+          ios_backgroundColor={Colors.muted}
+          onValueChange={setRepeatSame}
+          value={repeatSame}
+        />
+      </View>
+      <View style={styles.toggleCard}>
+        <View style={styles.toggleTextWrapper}>
+          <Text style={styles.toggleTitle}>Para outros jogadores</Text>
+          <Text style={styles.toggleSubtitle}>Uma pergunta já respondida pode cair para outra pessoa.</Text>
+        </View>
+        <Switch
+          trackColor={{ false: Colors.muted, true: Colors.primary }}
+          thumbColor={Colors.border}
+          ios_backgroundColor={Colors.muted}
+          onValueChange={setRepeatOther}
+          value={repeatOther}
+        />
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        <BrutalHeader title="Configurar Partida" />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-          {/* Banner AdMob */}
-          {/* <ConfigBannerAd /> */}
-
-          <View style={styles.headerInfo}>
-            <Text style={styles.subtitle}>
-              Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
-            </Text>
-          </View>
-
-          {gameMode === 'teologico' && (
-            <View style={styles.warningCard}>
-              <Text style={styles.warningText}>
-                ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
-              </Text>
-            </View>
-          )}
-
-          {/* Level Selection */}
-          {gameMode !== 'teologico' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Nível de Dificuldade</Text>
-              <View style={styles.segmentedContainer}>
-                {gameMode === 'compartilhar' ? (
-                  <>
-                    {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, Colors.accent1)}
-                    {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, Colors.warning)}
-                    {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, Colors.accent2)}
-                  </>
-                ) : (
-                  <>
-                    {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, Colors.accent1)}
-                    {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, Colors.warning)}
-                    {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, Colors.accent2)}
-                  </>
-                )}
+      {isTabletLandscape ? (
+        // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
+        <View style={styles.tabletWrapper}>
+          <BrutalHeader title="Configurar Partida" />
+          <View style={styles.tabletRow}>
+            {/* Left column: mode subtitle + level section */}
+            <View style={styles.tabletLeft}>
+              <View style={styles.headerInfo}>
+                <Text style={styles.subtitle}>
+                  Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
+                </Text>
               </View>
-
-              {/* include lower levels switch */}
-              <View style={[styles.toggleCard, { marginTop: 12 }]}>
-                <View style={styles.toggleTextWrapper}>
-                  <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
-                  <Text style={styles.toggleSubtitle}>
-                    Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
+              {gameMode === 'teologico' && (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningText}>
+                    ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
                   </Text>
                 </View>
-                <Switch
-                  trackColor={{ false: Colors.muted, true: Colors.primary }}
-                  thumbColor={Colors.border}
-                  ios_backgroundColor={Colors.muted}
-                  onValueChange={setIncludeLower}
-                  value={includeLower}
-                />
+              )}
+              {levelSection}
+            </View>
+            {/* Right column: scoring + footer */}
+            <View style={styles.tabletRight}>
+              {scoringSection}
+              <View style={styles.footer}>
+                <BrutalButton variant="accent1" size="large" onPress={handleSubmit}>
+                  Bora Jogar!
+                </BrutalButton>
               </View>
             </View>
-          )}
-
-          {(gameMode === 'quiz' || gameMode === 'teologico') ? (
-            <>
-              {/* Target Score Selection */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Pontuação Alvo (Para Vencer)</Text>
-                <View style={styles.segmentedContainer}>
-                  {renderSegment('10 pts', '10', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
-                  {renderSegment('15 pts', '15', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
-                  {renderSegment('20 pts', '20', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
-                </View>
-              </View>
-
-              {/* Timer Selection */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Tempo por Turno</Text>
-                <View style={styles.timerCard}>
-                  <Pressable
-                    onPress={() => {
-                      Vibration.vibrate(10);
-                      playClickSound();
-                      setTimer(prev => Math.max(15, prev - 15));
-                    }}
-                    style={styles.timerButton}
-                  >
-                    <Minus color={Colors.border} size={24} strokeWidth={3} />
-                  </Pressable>
-
-                  <View style={styles.timerDisplay}>
-                    <Text style={styles.timerValue}>{timer}s</Text>
-                  </View>
-
-                  <Pressable
-                    onPress={() => {
-                      Vibration.vibrate(10);
-                      playClickSound();
-                      setTimer(prev => Math.min(120, prev + 15));
-                    }}
-                    style={styles.timerButton}
-                  >
-                    <Plus color={Colors.border} size={24} strokeWidth={3} />
-                  </Pressable>
-                </View>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Compartilhar Repeats Toggles */}
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Perguntas Repetidas</Text>
-
-                <View style={[styles.toggleCard, { marginBottom: 12 }]}>
-                  <View style={styles.toggleTextWrapper}>
-                    <Text style={styles.toggleTitle}>Para o mesmo jogador</Text>
-                    <Text style={styles.toggleSubtitle}>Uma pergunta pode cair de novo para a mesma pessoa.</Text>
-                  </View>
-                  <Switch
-                    trackColor={{ false: Colors.muted, true: Colors.primary }}
-                    thumbColor={Colors.border}
-                    ios_backgroundColor={Colors.muted}
-                    onValueChange={setRepeatSame}
-                    value={repeatSame}
-                  />
-                </View>
-
-                <View style={styles.toggleCard}>
-                  <View style={styles.toggleTextWrapper}>
-                    <Text style={styles.toggleTitle}>Para outros jogadores</Text>
-                    <Text style={styles.toggleSubtitle}>Uma pergunta já respondida pode cair para outra pessoa.</Text>
-                  </View>
-                  <Switch
-                    trackColor={{ false: Colors.muted, true: Colors.primary }}
-                    thumbColor={Colors.border}
-                    ios_backgroundColor={Colors.muted}
-                    onValueChange={setRepeatOther}
-                    value={repeatOther}
-                  />
-                </View>
-              </View>
-            </>
-          )}
-
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <BrutalButton variant="accent1" size="large" onPress={handleSubmit}>
-            Bora Jogar!
-          </BrutalButton>
+          </View>
         </View>
+      ) : (
+        // ── PORTRAIT: original layout ────────────────────────────────────────
+        <View style={styles.inner}>
+          <BrutalHeader title="Configurar Partida" />
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <View style={styles.headerInfo}>
+              <Text style={styles.subtitle}>
+                Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
+              </Text>
+            </View>
 
-      </View>
+            {gameMode === 'teologico' && (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningText}>
+                  ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
+                </Text>
+              </View>
+            )}
+
+            {levelSection}
+            {scoringSection}
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <BrutalButton variant="accent1" size="large" onPress={handleSubmit}>
+              Bora Jogar!
+            </BrutalButton>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -351,7 +375,6 @@ const styles = StyleSheet.create({
     borderRadius: Metrics.radiusCard,
     padding: 16,
     marginBottom: 24,
-    // Neobrutalist shadow
     shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
@@ -364,4 +387,22 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 20,
   },
+  // ── Tablet Landscape ───────────────────────────────────────────────────
+  tabletWrapper: {
+    flex: 1,
+    padding: Metrics.containerMargin,
+    width: '100%',
+  },
+  tabletRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 24,
+  },
+  tabletLeft: {
+    flex: 5,
+  },
+  tabletRight: {
+    flex: 5,
+  },
 });
+

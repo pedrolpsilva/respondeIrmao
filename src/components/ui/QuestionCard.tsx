@@ -14,6 +14,7 @@ interface QuestionCardProps {
   showAnswer?: boolean;
   onToggleAnswer?: () => void;
   containerStyle?: any;
+  isTabletLandscape?: boolean;
 }
 
 const LEVEL_DISPLAY_NAMES: Record<string, string> = {
@@ -34,6 +35,7 @@ export default function QuestionCard({
   showAnswer = false,
   onToggleAnswer,
   containerStyle,
+  isTabletLandscape = false,
 }: QuestionCardProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const flipAnim = useRef(new Animated.Value(0)).current;
@@ -126,6 +128,12 @@ export default function QuestionCard({
           <Text style={styles.questionText}>
             {displayedText}
           </Text>
+          {timeUp && question.correctAnswer && (
+            <View style={styles.answerBelowContainer}>
+              <Text style={styles.answerBelowLabel}>A resposta era:</Text>
+              <Text style={styles.answerBelowText}>{question.correctAnswer}</Text>
+            </View>
+          )}
         </View>
 
         {!timeUp && showAnswerButton && (
@@ -149,15 +157,16 @@ const styles = StyleSheet.create({
   cardContainer: {
     position: 'relative',
     width: '100%',
-    height: '60%',
-    marginBottom: Metrics.shadowOffset * 2,
+    flex: 1,
+    minHeight: 180,
+    marginBottom: Metrics.shadowOffset + 12,
   },
   cardShadow: {
     position: 'absolute',
-    top: Metrics.shadowOffset * 2,
-    left: Metrics.shadowOffset * 2,
-    right: -Metrics.shadowOffset * 2,
-    bottom: -Metrics.shadowOffset * 2,
+    top: Metrics.shadowOffset,
+    left: Metrics.shadowOffset,
+    right: -Metrics.shadowOffset,
+    bottom: -Metrics.shadowOffset,
     backgroundColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     zIndex: 1,
@@ -207,5 +216,26 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.subheading,
     fontSize: 18,
     color: Colors.text,
+  },
+  answerBelowContainer: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 2,
+    borderTopColor: Colors.border,
+    width: '100%',
+    alignItems: 'center',
+  },
+  answerBelowLabel: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 14,
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  answerBelowText: {
+    fontFamily: Fonts.heading,
+    fontSize: 22,
+    color: Colors.accent,
+    textAlign: 'center',
   },
 });

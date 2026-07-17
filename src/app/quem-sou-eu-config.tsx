@@ -3,6 +3,7 @@ import BrutalHeader from '@/components/ui/BrutalHeader';
 import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { useRouter } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -12,6 +13,7 @@ import { playClickSound } from '@/services/soundManager';
 export default function QuemSouEuConfigScreen() {
   const router = useRouter();
   const { whoAmIConfig, updateWhoAmIConfig, resetGame, whoAmICards } = useGame();
+  const { isTabletLandscape } = useTabletLandscape();
 
   const allCategories = React.useMemo(() => {
     const cats = whoAmICards.map(c => c.category.trim()).filter(Boolean);
@@ -87,10 +89,13 @@ export default function QuemSouEuConfigScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        <BrutalHeader title="Quem Sou Eu?" />
+      <View style={[styles.inner, isTabletLandscape && styles.innerTablet]}>
+        <BrutalHeader title="Quem Sou Eu? — Configurar" />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[
+          styles.scrollContent,
+          isTabletLandscape && styles.scrollContentTablet
+        ]}>
 
           {/* Banner AdMob */}
           {/* <ConfigBannerAd /> */}
@@ -233,8 +238,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
+  innerTablet: {
+    maxWidth: 800,
+  },
   scrollContent: {
     paddingBottom: 30,
+  },
+  scrollContentTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 24,
   },
   headerInfo: {
     marginBottom: 24,

@@ -1,14 +1,19 @@
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function HelpScreen() {
+  const { isTabletLandscape } = useTabletLandscape();
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
+      <View style={[styles.inner, isTabletLandscape && styles.innerTablet]}>
         <BrutalHeader title="Ajuda e Regras" />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[
+          styles.scrollContainer,
+          isTabletLandscape && styles.scrollContainerTablet
+        ]}>
 
           <View style={styles.section}>
             <View style={[styles.badge, { backgroundColor: Colors.primary }]}>
@@ -88,8 +93,17 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
+  innerTablet: {
+    maxWidth: 800,
+  },
   scrollContainer: {
     paddingBottom: 24,
+  },
+  scrollContainerTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 0,
+    columnGap: 20,
   },
   header: {
     marginTop: 20,

@@ -83,18 +83,17 @@ export default function BrutalModal({
 
             <View style={styles.footer}>
               {onCancel &&
-                <>
-                  <BrutalButton
-                    variant="surface"
-                    onPress={onCancel}
-                    style={styles.button}
-                    size="medium"
-                  >
-                    {cancelText}
-                  </BrutalButton>
-                  <View style={{ width: Spacing.two }} />
-                </>
+                <BrutalButton
+                  variant="surface"
+                  onPress={onCancel}
+                  style={styles.button}
+                  size="medium"
+                >
+                  {cancelText}
+                </BrutalButton>
               }
+
+              {onCancel && onConfirm && <View style={{ width: Spacing.two }} />}
 
               {onConfirm &&
                 <BrutalButton
