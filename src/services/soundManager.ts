@@ -6,6 +6,16 @@ const SOUND_PRESETS = {
 };
 
 let currentSoundInstance: Audio.Sound | null = null;
+let isMutedInternal = false;
+
+export const setSoundMuted = (muted: boolean) => {
+    isMutedInternal = muted;
+    if (muted) {
+        stopAllSounds();
+    }
+};
+
+export const getSoundMuted = () => isMutedInternal;
 
 export const stopAllSounds = async () => {
     if (currentSoundInstance) {
@@ -25,6 +35,7 @@ export const stopAllSounds = async () => {
 };
 
 export const playSoundPreset = async (presetName: 'timeOut' | 'tenSeconds') => {
+    if (isMutedInternal) return;
     try {
         const soundModule = SOUND_PRESETS[presetName];
         if (!soundModule) return;
@@ -62,6 +73,7 @@ export const playSoundPreset = async (presetName: 'timeOut' | 'tenSeconds') => {
 };
 
 export const playClickSound = async () => {
+    if (isMutedInternal) return;
     try {
         await Audio.setAudioModeAsync({
             playsInSilentModeIOS: true,

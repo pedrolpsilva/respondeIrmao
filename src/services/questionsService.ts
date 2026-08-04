@@ -247,19 +247,16 @@ export const questionsService = {
             level: levelKey,
           }));
         } else if (stepKey === 'torre') {
-          newTorre = data.map((row: any, idx: number) => {
-            let level = 'facil';
-            if (idx >= 90) level = 'muito_dificil';
-            else if (idx >= 60) level = 'dificil';
-            else if (idx >= 30) level = 'media';
-
+          newTorre = data.map((row: any) => {
+            const classe = row.classe || 'facil';
             return {
               id: `remote_torre_${row.id}`,
               text: row.pergunta || '',
               correctAnswer: row.resposta_correta || '',
               wrongAnswers: [row.resposta_incorreta_1 || '', row.resposta_incorreta_2 || '', row.resposta_incorreta_3 || ''].filter(Boolean),
               bibleReference: row.referencia_biblica || '',
-              level,
+              classe: (classe === 'media' ? 'medio' : classe) as 'facil' | 'medio' | 'dificil',
+              level: classe,
             };
           });
         } else if (stepKey === 'who_am_i') {

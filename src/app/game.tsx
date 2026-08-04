@@ -2,10 +2,11 @@ import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import QuestionCard from '@/components/ui/QuestionCard';
 import { Question } from '@/constants/questions';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { useGameInterstitial } from '@/hooks/useGameInterstitial';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { useTheme } from '@/hooks/use-theme';
 import { playSoundPreset, stopAllSounds, playClickSound } from '@/services/soundManager';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -15,8 +16,9 @@ import { Animated, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, 
 
 export default function GameScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { showAdThenNavigate, adLoaded } = useGameInterstitial();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
   const {
     gameMode,
     players,
@@ -235,15 +237,21 @@ export default function GameScreen() {
     const winner = players.find(p => p.points >= config.targetPoints);
     if (winner) {
       console.log(`[Game] 🏆 Condição de vitória atingida! Vencedor: ${winner.name} (${winner.points} pontos)`);
-      // console.log(`[Game] 📺 Preparando exibição do interstitial (adLoaded=${adLoaded})...`);
-      // showAdThenNavigate(() => {
-      //   console.log('[Game] ✅ Navegando para /results após o anúncio');
-      //   router.replace('/results');
-      // });
-      router.replace('/results'); // remover esta linha ao restaurar os anúncios
+      stopAllSounds();
+      showAdThenNavigate(() => {
+        console.log('[Game] ✅ Navegando para /results após o anúncio');
+        router.replace('/results');
+      });
       return true;
     }
     return false;
+  };
+
+  const handleExitGame = () => {
+    stopAllSounds();
+    showAdThenNavigate(() => {
+      router.replace('/');
+    });
   };
 
   const handleCorrect = () => {
@@ -284,26 +292,27 @@ export default function GameScreen() {
   const renderScoreboard = () => {
     return (
       <View style={styles.scoreboardContainer}>
-        <Text style={styles.scoreboardLabel}>PLACAR ATUAL</Text>
+        <Text style={[styles.scoreboardLabel, { color: theme.textSecondary }]}>PLACAR ATUAL</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
           {sortedPlayers.map((p, i) => {
             const isActive = p.id === currentPlayer?.id;
             return (
               <View key={p.id} style={[
                 styles.playerCard,
-                isActive && styles.playerCardActive
+                { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border },
+                isActive && { borderColor: theme.primary, backgroundColor: theme.background }
               ]}>
                 <View style={styles.playerCardContent}>
                   {p.photoUri ? (
-                    <Image source={{ uri: p.photoUri }} style={styles.scoreboardAvatar} />
+                    <Image source={{ uri: p.photoUri }} style={[styles.scoreboardAvatar, { borderColor: theme.border }]} />
                   ) : (
-                    <View style={styles.scoreboardAvatarPlaceholder}>
-                      <Text style={styles.scoreboardAvatarPlaceholderText}>{p.name.charAt(0).toUpperCase()}</Text>
+                    <View style={[styles.scoreboardAvatarPlaceholder, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                      <Text style={[styles.scoreboardAvatarPlaceholderText, { color: theme.text }]}>{p.name.charAt(0).toUpperCase()}</Text>
                     </View>
                   )}
                   {i <= 2 && (<Medal color={i == 0 ? '#F5B300' : i == 1 ? '#999999' : '#CD7F32'} size={16} />)}
-                  <Text style={styles.playerName}>{p.name}</Text>
-                  <Text style={styles.playerPoints}>{p.points}</Text>
+                  <Text style={[styles.playerName, { color: theme.text }]}>{p.name}</Text>
+                  <Text style={[styles.playerPoints, { color: theme.text }]}>{p.points}</Text>
                 </View>
               </View>
             );
@@ -321,8 +330,8 @@ export default function GameScreen() {
         <View style={styles.actionRow}>
           <View style={styles.halfAction}>
             <BrutalButton variant="surface" size="large" onPress={handleWrong}>
-              <X size={24} color={Colors.accent2} style={{ marginRight: 8 }} />
-              <Text style={styles.buttonLabel}>{!isTimeUp ? 'Errou' : 'Próximo'}</Text>
+              <X size={24} color={theme.accent2} style={{ marginRight: 8 }} />
+              <Text style={[styles.buttonLabel, { color: theme.text }]}>{!isTimeUp ? 'Errou' : 'Próximo'}</Text>
             </BrutalButton>
           </View>
           {!isTimeUp && (
@@ -348,13 +357,14 @@ export default function GameScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {isTabletLandscape ? (
         // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
         <View style={styles.tabletWrapper}>
           <BrutalHeader
-            showBack={false}
-            backRoute
+            showBack={true}
+            backRoute={true}
+            onBack={handleExitGame}
             title="PARTIDA"
             transparent={true}
             rightComponent={
@@ -363,12 +373,12 @@ export default function GameScreen() {
                   playClickSound();
                   setIsSoundEnabled(!isSoundEnabled);
                 }}
-                style={styles.soundButton}
+                style={[styles.soundButton, { backgroundColor: theme.background, borderColor: theme.border }]}
               >
                 {isSoundEnabled ? (
-                  <Volume2 color={Colors.text} size={24} />
+                  <Volume2 color={theme.text} size={24} />
                 ) : (
-                  <VolumeX color={Colors.muted} size={24} />
+                  <VolumeX color={theme.muted} size={24} />
                 )}
               </Pressable>
             }
@@ -427,9 +437,9 @@ export default function GameScreen() {
                         ]} />
                         <View style={styles.timerIconOverlay}>
                           {isTimerPaused ? (
-                            <Play size={18} color={Colors.text} fill={Colors.text} />
+                            <Play size={18} color={theme.text} fill={theme.text} />
                           ) : (
-                            <Pause size={18} color={Colors.text} fill={Colors.text} />
+                            <Pause size={18} color={theme.text} fill={theme.text} />
                           )}
                           <Text style={styles.timerPercentageText}>
                             {timeRemaining}s
@@ -469,10 +479,11 @@ export default function GameScreen() {
         </View>
       ) : (
         // ── PORTRAIT: original layout ────────────────────────────────────────
-        <View style={styles.inner}>
+        <View style={[styles.inner, isTablet && styles.innerTabletPortrait]}>
           <BrutalHeader
-            showBack={false}
-            backRoute
+            showBack={true}
+            backRoute={true}
+            onBack={handleExitGame}
             title="PARTIDA"
             transparent={true}
             rightComponent={
@@ -481,12 +492,12 @@ export default function GameScreen() {
                   playClickSound();
                   setIsSoundEnabled(!isSoundEnabled);
                 }}
-                style={styles.soundButton}
+                style={[styles.soundButton, { backgroundColor: theme.background, borderColor: theme.border }]}
               >
                 {isSoundEnabled ? (
-                  <Volume2 color={Colors.text} size={24} />
+                  <Volume2 color={theme.text} size={24} />
                 ) : (
-                  <VolumeX color={Colors.muted} size={24} />
+                  <VolumeX color={theme.muted} size={24} />
                 )}
               </Pressable>
             }
@@ -500,7 +511,15 @@ export default function GameScreen() {
             {/* Row wrapping both banner and timer */}
             <View style={styles.turnBannerRow}>
               {/* Left side: Blue banner container */}
-              <View style={[styles.turnBannerLeft, { flex: (gameMode === 'quiz' || gameMode === 'teologico') ? 0.75 : 1 }]}>
+              <View style={[
+                styles.turnBannerLeft,
+                {
+                  backgroundColor: theme.primary,
+                  borderColor: theme.border,
+                  shadowColor: theme.border,
+                  flex: (gameMode === 'quiz' || gameMode === 'teologico') ? 0.75 : 1
+                }
+              ]}>
                 <View style={styles.playerInfoRow}>
                   {/* Player Avatar / Placeholder */}
                   {currentPlayer.photoUri ? (
@@ -530,7 +549,7 @@ export default function GameScreen() {
               {/* Right side: Horizontal Timer Button */}
               {(gameMode === 'quiz' || gameMode === 'teologico') && (
                 <TouchableOpacity
-                  style={styles.horizontalTimerContainer}
+                  style={[styles.horizontalTimerContainer, { borderColor: theme.border, shadowColor: theme.border }]}
                   onPress={toggleTimerPause}
                   activeOpacity={0.8}
                 >
@@ -546,9 +565,9 @@ export default function GameScreen() {
                   ]} />
                   <View style={styles.timerIconOverlay}>
                     {isTimerPaused ? (
-                      <Play size={18} color={Colors.text} fill={Colors.text} />
+                      <Play size={18} color="#1C1917" fill="#1C1917" />
                     ) : (
-                      <Pause size={18} color={Colors.text} fill={Colors.text} />
+                      <Pause size={18} color="#1C1917" fill="#1C1917" />
                     )}
                     <Text style={styles.timerPercentageText}>
                       {timeRemaining}s
@@ -575,8 +594,8 @@ export default function GameScreen() {
           />
 
           {gameMode === 'teologico' && showAnswer && (
-            <View style={styles.observationContainer}>
-              <Text style={styles.observationText}>
+            <View style={[styles.observationContainer, { borderColor: theme.border, shadowColor: theme.border }]}>
+              <Text style={[styles.observationText, { color: '#1C1917' }]}>
                 Obs: as respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
               </Text>
             </View>
@@ -598,12 +617,12 @@ export default function GameScreen() {
           style={styles.photoModalOverlay} 
           onPress={() => setPhotoModalVisible(false)}
         >
-          <View style={styles.photoModalCard}>
-            <Text style={styles.photoModalTitle}>{currentPlayer.name}</Text>
+          <View style={[styles.photoModalCard, { backgroundColor: theme.background, borderColor: theme.border, shadowColor: theme.border }]}>
+            <Text style={[styles.photoModalTitle, { color: theme.text }]}>{currentPlayer.name}</Text>
             {currentPlayer.photoUri && (
               <Image 
                 source={{ uri: currentPlayer.photoUri }} 
-                style={styles.photoModalImage} 
+                style={[styles.photoModalImage, { borderColor: theme.border, backgroundColor: theme.surface }]} 
                 contentFit="contain"
               />
             )}
@@ -625,7 +644,6 @@ export default function GameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flex: 1,
@@ -641,7 +659,6 @@ const styles = StyleSheet.create({
   scoreboardLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 12,
-    color: Colors.muted,
     marginBottom: 8,
     letterSpacing: 1,
   },
@@ -650,15 +667,11 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   playerCard: {
-    backgroundColor: Colors.surface,
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minWidth: 100,
-    // Neobrutalist shadow
-    shadowColor: Colors.border,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -673,13 +686,11 @@ const styles = StyleSheet.create({
   playerName: {
     fontFamily: Fonts.bodyBold,
     fontSize: 16,
-    color: Colors.text,
     flex: 1,
   },
   playerPoints: {
     fontFamily: Fonts.heading,
     fontSize: 18,
-    color: Colors.text,
   },
   turnSection: {
     marginBottom: 20,
@@ -691,13 +702,10 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   turnBannerLeft: {
-    backgroundColor: Colors.primary,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: 8,
     padding: 10,
     justifyContent: 'center',
-    shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -732,14 +740,14 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: '#FFFFFF',
   },
   turnBannerAvatarPlaceholderLarge: {
     width: 50,
     height: 50,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: '#FFFFFF',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -747,7 +755,7 @@ const styles = StyleSheet.create({
   turnBannerAvatarPlaceholderLargeText: {
     fontFamily: Fonts.heading,
     fontSize: 22,
-    color: Colors.text,
+    color: '#1C1917',
   },
   turnBannerNameLarge: {
     fontFamily: Fonts.heading,
@@ -759,14 +767,12 @@ const styles = StyleSheet.create({
     flex: 0.25,
     backgroundColor: '#E5E7EB',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-    shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -787,7 +793,7 @@ const styles = StyleSheet.create({
   timerPercentageText: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.text,
+    color: '#1C1917',
     marginTop: 1,
   },
   photoModalOverlay: {
@@ -798,15 +804,12 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   photoModalCard: {
-    backgroundColor: Colors.background,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 16,
     width: '100%',
     maxWidth: 380,
     alignItems: 'center',
-    shadowColor: Colors.border,
     shadowOffset: { width: Metrics.shadowOffset, height: Metrics.shadowOffset },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -815,7 +818,6 @@ const styles = StyleSheet.create({
   photoModalTitle: {
     fontFamily: Fonts.heading,
     fontSize: 22,
-    color: Colors.text,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -824,8 +826,6 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 8,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
   actionsContainer: {
     marginTop: 'auto',
@@ -844,27 +844,22 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontFamily: Fonts.subheading,
     fontSize: 18,
-    color: Colors.text,
   },
   soundButton: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   observationContainer: {
     backgroundColor: '#FEF08A',
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 8,
     padding: 8,
     marginTop: 6,
     marginBottom: 6,
-    shadowColor: Colors.border,
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -873,7 +868,7 @@ const styles = StyleSheet.create({
   observationText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 11,
-    color: Colors.text,
+    color: '#1C1917',
     textAlign: 'center',
     lineHeight: 15,
   },
@@ -905,27 +900,20 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: Colors.border,
   },
   scoreboardAvatarPlaceholder: {
     width: 24,
     height: 24,
     borderRadius: 6,
-    backgroundColor: Colors.background,
     borderWidth: 1.5,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scoreboardAvatarPlaceholderText: {
     fontSize: 11,
     fontFamily: Fonts.heading,
-    color: Colors.text,
   },
-  playerCardActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EFF6FF',
-  },
+  playerCardActive: {},
   turnBannerAvatar: {
     width: 32,
     height: 32,
@@ -937,7 +925,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 6,
-    backgroundColor: Colors.background,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
     alignItems: 'center',
@@ -946,6 +933,10 @@ const styles = StyleSheet.create({
   turnBannerAvatarPlaceholderText: {
     fontSize: 14,
     fontFamily: Fonts.heading,
-    color: Colors.text,
+  },
+  innerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

@@ -11,6 +11,8 @@ export const Colors = {
   warning: '#F59E0B',
   purple: '#7C3AED', // Roxo para o modo Quem Sou Eu
   border: '#1C1917',
+  error: '#DC2626',
+  accent: '#4D7C0F',
   backgroundElement: '#FFFFFF',
   backgroundSelected: '#2959F8',
   textSecondary: '#A8A29E',

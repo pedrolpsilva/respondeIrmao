@@ -1,4 +1,5 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
+import { TorreLevel } from '@/constants/torreTypes';
 import { questionsService } from '@/services/questionsService';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -50,6 +51,8 @@ interface GameContextType {
   whoAmICards: WhoAmICard[];
   isSyncingQuestions: boolean;
   randomNames: string[];
+  torreSelectedLevel: TorreLevel;
+  setTorreSelectedLevel: (level: TorreLevel) => void;
 
   // Helpers to manage state transitions
   resetGame: () => void;
@@ -93,6 +96,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [whoAmICards, setWhoAmICards] = useState<WhoAmICard[]>(WHO_AM_I_CARDS);
   const [randomNames, setRandomNames] = useState<string[]>([]);
   const [isSyncingQuestions, setIsSyncingQuestions] = useState<boolean>(false);
+  const [torreSelectedLevel, setTorreSelectedLevel] = useState<TorreLevel>('muito_facil');
 
   useEffect(() => {
     const initializeAndSync = async () => {
@@ -227,6 +231,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         whoAmICards,
         isSyncingQuestions,
         randomNames,
+        torreSelectedLevel,
+        setTorreSelectedLevel,
         resetGame,
         addPlayer,
         removePlayer,

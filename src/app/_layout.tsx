@@ -10,6 +10,7 @@ import mobileAds from 'react-native-google-mobile-ads';
 import { Colors } from '@/constants/theme';
 import { GameProvider } from '@/hooks/useGameContext';
 import { ModalProvider } from '@/hooks/useModal';
+import { SettingsProvider } from '@/hooks/useSettingsContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().catch(() => { });
@@ -50,29 +51,33 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ModalProvider>
-        <GameProvider>
-          <StatusBar hidden={true} />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: Colors.background },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="players" />
-            <Stack.Screen name="config" />
-            <Stack.Screen name="game" />
-            <Stack.Screen name="torre" />
-            <Stack.Screen name="quem-sou-eu-config" />
-            <Stack.Screen name="quem-sou-eu-game" />
-            <Stack.Screen name="results" />
-            <Stack.Screen name="about" />
-            <Stack.Screen name="help" />
-          </Stack>
-        </GameProvider>
-      </ModalProvider>
+      <SettingsProvider>
+        <ModalProvider>
+          <GameProvider>
+            <StatusBar hidden={true} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: Colors.background },
+                animation: 'slide_from_right',
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="settings" />
+              <Stack.Screen name="players" />
+              <Stack.Screen name="config" />
+              <Stack.Screen name="game" />
+              <Stack.Screen name="torre-config" />
+              <Stack.Screen name="torre" />
+              <Stack.Screen name="quem-sou-eu-config" />
+              <Stack.Screen name="quem-sou-eu-game" />
+              <Stack.Screen name="results" />
+              <Stack.Screen name="about" />
+              <Stack.Screen name="help" />
+            </Stack>
+          </GameProvider>
+        </ModalProvider>
+      </SettingsProvider>
     </GestureHandlerRootView>
   );
 }

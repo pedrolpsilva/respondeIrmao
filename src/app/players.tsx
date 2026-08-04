@@ -4,10 +4,11 @@ import BrutalInput from '@/components/ui/BrutalInput';
 import BrutalCameraModal from '@/components/ui/BrutalCameraModal';
 import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import PlayerChip from '@/components/ui/PlayerChip';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { useModal } from '@/hooks/useModal';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { useTheme } from '@/hooks/use-theme';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -16,10 +17,11 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const BrutalCameraButton = ({ onPress, photoUri }: { onPress: () => void; photoUri: string | null }) => {
+  const theme = useTheme();
   const [pressed, setPressed] = useState(false);
   return (
     <View style={styles.cameraBtnWrapper}>
-      <View style={styles.cameraBtnShadow} />
+      <View style={[styles.cameraBtnShadow, { backgroundColor: theme.border }]} />
       <Pressable
         onPressIn={() => setPressed(true)}
         onPressOut={() => setPressed(false)}
@@ -27,6 +29,8 @@ const BrutalCameraButton = ({ onPress, photoUri }: { onPress: () => void; photoU
         style={[
           styles.cameraBtnFront,
           {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
             transform: [
               { translateX: pressed ? Metrics.shadowOffset : 0 },
               { translateY: pressed ? Metrics.shadowOffset : 0 },
@@ -40,7 +44,7 @@ const BrutalCameraButton = ({ onPress, photoUri }: { onPress: () => void; photoU
             style={styles.cameraBtnImage}
           />
         ) : (
-          <Camera color={Colors.text} size={24} strokeWidth={2.5} />
+          <Camera color={theme.text} size={24} strokeWidth={2.5} />
         )}
       </Pressable>
     </View>
@@ -49,9 +53,10 @@ const BrutalCameraButton = ({ onPress, photoUri }: { onPress: () => void; photoU
 
 export default function PlayersScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { players, addPlayer, removePlayer, gameMode, randomNames } = useGame();
   const { showAlert } = useModal();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
   const [playerName, setPlayerName] = useState('');
   const [inputError, setInputError] = useState(false);
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
@@ -171,7 +176,7 @@ export default function PlayersScreen() {
       {players.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>👥</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: theme.muted }]}>
             Adicione pelo menos 2 jogadores para começar.
           </Text>
         </View>
@@ -196,7 +201,7 @@ export default function PlayersScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -236,7 +241,7 @@ export default function PlayersScreen() {
                 </View>
               </View>
               {/* Right: chips + footer button */}
-              <View style={styles.tabletRight}>
+              <View style={[styles.tabletRight, { borderColor: theme.border, backgroundColor: theme.surface }]}>
                 {chipsContent}
                 <View style={styles.footer}>
                   <BrutalButton
@@ -252,11 +257,8 @@ export default function PlayersScreen() {
           </View>
         ) : (
           // ── PORTRAIT: original layout ────────────────────────────────────────
-          <View style={styles.inner}>
+          <View style={[styles.inner, isTablet && styles.innerTabletPortrait]}>
             <BrutalHeader title="Quem vai jogar?" />
-
-            {/* Banner AdMob */}
-            {/* <ConfigBannerAd /> */}
 
             {/* Input + Add Row */}
             <View style={styles.inputRow}>
@@ -318,7 +320,6 @@ export default function PlayersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flex: 1,
@@ -372,7 +373,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bodyBold,
     fontSize: 16,
     textAlign: 'center',
-    color: Colors.muted,
     lineHeight: 24,
   },
   footer: {
@@ -399,9 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'space-between',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
-    backgroundColor: Colors.surface,
     padding: 16,
     overflow: 'hidden',
   },
@@ -418,7 +416,6 @@ const styles = StyleSheet.create({
     left: Metrics.shadowOffset,
     right: -Metrics.shadowOffset,
     bottom: -Metrics.shadowOffset,
-    backgroundColor: Colors.border,
     borderRadius: Metrics.radiusButton,
     zIndex: 1,
   },
@@ -426,9 +423,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusButton,
     alignItems: 'center',
     justifyContent: 'center',
@@ -441,5 +436,10 @@ const styles = StyleSheet.create({
   modalButtonsContainer: {
     gap: 12,
     marginBottom: 12,
+  },
+  innerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

@@ -5,6 +5,7 @@ export interface Question {
   correctAnswer?: string; // optional for Quiz mode display
   wrongAnswers?: string[];
   bibleReference?: string;
+  classe?: 'facil' | 'medio' | 'dificil'; // Torre de Babel question difficulty class
 }
 
 export interface WhoAmICard {

@@ -2,9 +2,11 @@ import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import HintGrid from '@/components/ui/HintGrid';
 import { WhoAmICard } from '@/constants/questions';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { useGameInterstitial } from '@/hooks/useGameInterstitial';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { useTheme } from '@/hooks/use-theme';
 import { playClickSound, playSoundPreset, stopAllSounds } from '@/services/soundManager';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -32,6 +34,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 export default function QuemSouEuGameScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const {
     players,
     whoAmICards,
@@ -43,7 +46,7 @@ export default function QuemSouEuGameScreen() {
     resetGame,
     setPlayers,
   } = useGame();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
 
   const currentPlayer = players[currentPlayerIndex];
 
@@ -92,7 +95,7 @@ export default function QuemSouEuGameScreen() {
         useNativeDriver: false,
       });
       
-      modalAnimRef.current.start(({ finished }) => {
+      modalAnimRef.current.start(({ finished }: { finished?: boolean }) => {
         if (finished) {
           setAnswerModalVisible(false);
           // Resume game timer if timer is enabled and card is not solved
@@ -271,11 +274,23 @@ export default function QuemSouEuGameScreen() {
     ? Math.max(1, currentCard.hints.length - revealedIndices.length)
     : 1;
 
+  const { showAdThenNavigate } = useGameInterstitial();
+
+  const handleExitQuemSouEu = () => {
+    stopTimer();
+    showAdThenNavigate(() => {
+      router.replace('/');
+    });
+  };
+
   // ── Actions ───────────────────────────────────────────────────────────────────
   const checkWinCondition = () => {
     const winner = players.find(p => p.points >= whoAmIConfig.targetPoints);
     if (winner) {
-      router.replace('/results');
+      stopTimer();
+      showAdThenNavigate(() => {
+        router.replace('/results');
+      });
       return true;
     }
     return false;
@@ -325,25 +340,31 @@ export default function QuemSouEuGameScreen() {
 
   const renderScoreboard = () => (
     <View style={styles.scoreboardContainer}>
-      <Text style={styles.scoreboardLabel}>PLACAR ATUAL</Text>
+      <Text style={[styles.scoreboardLabel, { color: theme.textSecondary }]}>PLACAR ATUAL</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.playersScroll}>
         {sortedPlayers.map((p, i) => {
           const isActive = p.id === currentPlayer?.id;
           return (
-            <View key={p.id} style={[styles.playerCard, isActive && styles.playerCardActive]}>
+            <View key={p.id} style={[
+              styles.playerCard,
+              { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border },
+              isActive && { backgroundColor: theme.primary, borderColor: theme.border }
+            ]}>
               <View style={styles.playerCardContent}>
                 {p.photoUri ? (
-                  <Image source={{ uri: p.photoUri }} style={styles.scoreboardAvatar} />
+                  <Image source={{ uri: p.photoUri }} style={[styles.scoreboardAvatar, { borderColor: theme.border }]} />
                 ) : (
-                  <View style={styles.scoreboardAvatarPlaceholder}>
-                    <Text style={styles.scoreboardAvatarPlaceholderText}>{p.name.charAt(0).toUpperCase()}</Text>
+                  <View style={[styles.scoreboardAvatarPlaceholder, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                    <Text style={[styles.scoreboardAvatarPlaceholderText, { color: theme.text }]}>{p.name.charAt(0).toUpperCase()}</Text>
                   </View>
                 )}
-                {i <= 2 && <Medal color={i === 0 ? '#F5B300' : i === 1 ? '#999999' : '#CD7F32'} size={16} />}
-                <Text style={[styles.playerName, isActive && styles.playerNameActive]} numberOfLines={1}>
+                {i === 0 && <Medal color="#F5B300" size={16} />}
+                {i === 1 && <Medal color="#999999" size={16} />}
+                {i === 2 && <Medal color="#CD7F32" size={16} />}
+                <Text style={[styles.playerName, { color: theme.text }, isActive && { color: '#FFFFFF' }]} numberOfLines={1}>
                   {p.name}
                 </Text>
-                <Text style={[styles.playerPoints, isActive && styles.playerPointsActive]}>
+                <Text style={[styles.playerPoints, { color: theme.text }, isActive && { color: '#FFFFFF' }]}>
                   {p.points}
                 </Text>
               </View>
@@ -356,9 +377,9 @@ export default function QuemSouEuGameScreen() {
 
   if (!currentPlayer || !currentCard) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={[styles.inner, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: theme.muted }]}>
             ⚠️ Nenhuma carta disponível para as categorias selecionadas.{'\n'}Adicione cartas no Google Sheets!
           </Text>
           <BrutalButton variant="primary" onPress={() => router.replace('/')} style={{ marginTop: 24 }}>
@@ -376,13 +397,14 @@ export default function QuemSouEuGameScreen() {
   const allHintsRevealed = revealedIndices.length >= currentCard.hints.length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {isTabletLandscape ? (
         // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
         <View style={styles.tabletWrapper}>
           <BrutalHeader
-            showBack={false}
-            backRoute
+            showBack={true}
+            backRoute={true}
+            onBack={handleExitQuemSouEu}
             title="QUEM SOU EU?"
             transparent={true}
             rightComponent={
@@ -391,12 +413,12 @@ export default function QuemSouEuGameScreen() {
                   playClickSound();
                   setIsSoundEnabled(!isSoundEnabled);
                 }}
-                style={styles.soundButton}
+                style={[styles.soundButton, { backgroundColor: theme.background, borderColor: theme.border }]}
               >
                 {isSoundEnabled ? (
-                  <Volume2 color={Colors.text} size={24} />
+                  <Volume2 color={theme.text} size={24} />
                 ) : (
-                  <VolumeX color={Colors.muted} size={24} />
+                  <VolumeX color={theme.muted} size={24} />
                 )}
               </Pressable>
             }
@@ -409,7 +431,7 @@ export default function QuemSouEuGameScreen() {
                 {/* Row wrapping both banner and timer */}
                 <View style={styles.turnBannerRow}>
                   {/* Left side: Blue banner container */}
-                  <View style={[styles.turnBannerLeft, { flex: whoAmIConfig.timerEnabled ? 0.75 : 1 }]}>
+                  <View style={[styles.turnBannerLeft, { backgroundColor: theme.primary, borderColor: theme.border, shadowColor: theme.border, flex: whoAmIConfig.timerEnabled ? 0.75 : 1 }]}>
                     <View style={styles.playerInfoRow}>
                       {/* Player Avatar / Placeholder */}
                       {currentPlayer.photoUri ? (
@@ -439,7 +461,7 @@ export default function QuemSouEuGameScreen() {
                   {/* Right side: Horizontal Timer Button */}
                   {whoAmIConfig.timerEnabled && (
                     <TouchableOpacity
-                      style={styles.horizontalTimerContainer}
+                      style={[styles.horizontalTimerContainer, { borderColor: theme.border, shadowColor: theme.border }]}
                       onPress={toggleTimerPause}
                       activeOpacity={0.8}
                     >
@@ -455,9 +477,9 @@ export default function QuemSouEuGameScreen() {
                       ]} />
                       <View style={styles.timerIconOverlay}>
                         {isTimerPaused ? (
-                          <Play size={18} color={Colors.text} fill={Colors.text} />
+                          <Play size={18} color="#1C1917" fill="#1C1917" />
                         ) : (
-                          <Pause size={18} color={Colors.text} fill={Colors.text} />
+                          <Pause size={18} color="#1C1917" fill="#1C1917" />
                         )}
                         <Text style={styles.timerPercentageText}>
                           {timeRemaining}s
@@ -473,16 +495,16 @@ export default function QuemSouEuGameScreen() {
                 <View style={styles.actionsContainer}>
                   {isTimeUp && whoAmIConfig.timerEnabled ? (
                     <BrutalButton variant="surface" size="large" onPress={handlePass}>
-                      <SkipForward size={20} color={Colors.text} style={{ marginRight: 8 }} />
-                      <Text style={styles.buttonLabel}>Próximo</Text>
+                      <SkipForward size={20} color={theme.text} style={{ marginRight: 8 }} />
+                      <Text style={[styles.buttonLabel, { color: theme.text }]}>Próximo</Text>
                     </BrutalButton>
                   ) : (
                     <>
                       <View style={styles.actionRow}>
                         <View style={styles.halfAction}>
                           <BrutalButton variant="surface" size="large" onPress={handlePass}>
-                            <SkipForward size={20} color={Colors.text} style={{ marginRight: 4 }} />
-                            <Text style={styles.buttonLabel}>Passar</Text>
+                            <SkipForward size={20} color={theme.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.buttonLabel, { color: theme.text }]}>Passar</Text>
                           </BrutalButton>
                         </View>
                         <View style={styles.halfAction}>
@@ -505,15 +527,15 @@ export default function QuemSouEuGameScreen() {
               {/* Card Header: Points + Category + Ver Resposta */}
               <View style={styles.cardHeader}>
                 <View style={styles.leftHeaderSection}>
-                  <View style={styles.pointsBadge}>
-                    <Text style={styles.pointsValue}>{availablePoints}</Text>
-                    <Text style={styles.pointsLabel}>pts</Text>
+                  <View style={[styles.pointsBadge, { backgroundColor: theme.warning, borderColor: theme.border, shadowColor: theme.border }]}>
+                    <Text style={[styles.pointsValue, { color: '#1C1917' }]}>{availablePoints}</Text>
+                    <Text style={[styles.pointsLabel, { color: '#1C1917' }]}>pts</Text>
                   </View>
-                  <View style={styles.categoryBadge}>
+                  <View style={[styles.categoryBadge, { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border }]}>
                     <Text style={styles.categoryIcon}>
                       {CATEGORY_ICONS[currentCard.category] ?? '📖'}
                     </Text>
-                    <Text style={styles.categoryText}>{currentCard.category}</Text>
+                    <Text style={[styles.categoryText, { color: theme.text }]}>{currentCard.category}</Text>
                   </View>
                 </View>
 
@@ -521,13 +543,15 @@ export default function QuemSouEuGameScreen() {
                   onPress={handleShowAnswerModal}
                   style={[
                     styles.verRespostaBadge,
-                    isConfirmingAnswer && styles.verRespostaConfirmBadge
+                    { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border },
+                    isConfirmingAnswer && { backgroundColor: theme.accent2 }
                   ]}
                 >
                   <Text
                     style={[
                       styles.verRespostaText,
-                      isConfirmingAnswer && styles.verRespostaConfirmText
+                      { color: theme.text },
+                      isConfirmingAnswer && { color: '#FFFFFF' }
                     ]}
                   >
                     {isConfirmingAnswer ? 'Confirme ver resposta ⚠️' : 'Ver Resposta 👁️'}
@@ -537,15 +561,15 @@ export default function QuemSouEuGameScreen() {
 
               {showAnswer ? (
                 <View style={styles.answerReveal}>
-                  <View style={styles.answerRevealShadow} />
-                  <View style={styles.answerRevealFront}>
+                  <View style={[styles.answerRevealShadow, { backgroundColor: theme.border }]} />
+                  <View style={[styles.answerRevealFront, { backgroundColor: theme.accent1, borderColor: theme.border }]}>
                     <Text style={styles.answerRevealLabel}>RESPOSTA</Text>
                     <Text style={styles.answerRevealText}>{currentCard.answer}</Text>
                   </View>
                 </View>
               ) : (
                 <>
-                  <Text style={styles.hintGridLabel}>ESCOLHA UMA DICA:</Text>
+                  <Text style={[styles.hintGridLabel, { color: theme.muted }]}>ESCOLHA UMA DICA:</Text>
                   <HintGrid
                     totalHints={currentCard.hints.length}
                     revealedIndices={revealedIndices}
@@ -554,22 +578,22 @@ export default function QuemSouEuGameScreen() {
                   />
                   {currentHintText ? (
                     <View style={styles.hintCard}>
-                      <View style={styles.hintCardShadow} />
-                      <View style={styles.hintCardFront}>
-                        <Text style={styles.hintCardNumber}>Dica {(selectedHintIndex ?? 0) + 1}</Text>
-                        <Text style={styles.hintCardText}>"{currentHintText}"</Text>
+                      <View style={[styles.hintCardShadow, { backgroundColor: theme.border }]} />
+                      <View style={[styles.hintCardFront, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <Text style={[styles.hintCardNumber, { color: theme.primary }]}>Dica {(selectedHintIndex ?? 0) + 1}</Text>
+                        <Text style={[styles.hintCardText, { color: theme.text }]}>"{currentHintText}"</Text>
                       </View>
                     </View>
                   ) : (
-                    <View style={styles.hintPlaceholder}>
-                      <Text style={styles.hintPlaceholderText}>
+                    <View style={[styles.hintPlaceholder, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                      <Text style={[styles.hintPlaceholderText, { color: theme.muted }]}>
                         👆 Toque em um número para revelar uma dica
                       </Text>
                     </View>
                   )}
                   {allHintsRevealed && (
-                    <View style={styles.warningCard}>
-                      <Text style={styles.warningText}>
+                    <View style={[styles.warningCard, { borderColor: theme.border, shadowColor: theme.border }]}>
+                      <Text style={[styles.warningText, { color: '#1C1917' }]}>
                         🔔 Todas as dicas foram reveladas! O próximo acerto vale 1 ponto.
                       </Text>
                     </View>
@@ -581,10 +605,11 @@ export default function QuemSouEuGameScreen() {
         </View>
       ) : (
         // ── PORTRAIT: original layout ────────────────────────────────────────
-        <View style={styles.inner}>
+        <View style={[styles.inner, isTablet && styles.innerTabletPortrait]}>
           <BrutalHeader
-            showBack={false}
-            backRoute
+            showBack={true}
+            backRoute={true}
+            onBack={handleExitQuemSouEu}
             title="QUEM SOU EU?"
             transparent={true}
             rightComponent={
@@ -593,12 +618,12 @@ export default function QuemSouEuGameScreen() {
                   playClickSound();
                   setIsSoundEnabled(!isSoundEnabled);
                 }}
-                style={styles.soundButton}
+                style={[styles.soundButton, { backgroundColor: theme.background, borderColor: theme.border }]}
               >
                 {isSoundEnabled ? (
-                  <Volume2 color={Colors.text} size={24} />
+                  <Volume2 color={theme.text} size={24} />
                 ) : (
-                  <VolumeX color={Colors.muted} size={24} />
+                  <VolumeX color={theme.muted} size={24} />
                 )}
               </Pressable>
             }
@@ -611,7 +636,7 @@ export default function QuemSouEuGameScreen() {
             {/* Row wrapping both banner and timer */}
             <View style={styles.turnBannerRow}>
               {/* Left side: Blue banner container */}
-              <View style={[styles.turnBannerLeft, { flex: whoAmIConfig.timerEnabled ? 0.75 : 1 }]}>
+              <View style={[styles.turnBannerLeft, { backgroundColor: theme.primary, borderColor: theme.border, shadowColor: theme.border, flex: whoAmIConfig.timerEnabled ? 0.75 : 1 }]}>
                 <View style={styles.playerInfoRow}>
                   {/* Player Avatar / Placeholder */}
                   {currentPlayer.photoUri ? (
@@ -641,7 +666,7 @@ export default function QuemSouEuGameScreen() {
               {/* Right side: Horizontal Timer Button */}
               {whoAmIConfig.timerEnabled && (
                 <TouchableOpacity
-                  style={styles.horizontalTimerContainer}
+                  style={[styles.horizontalTimerContainer, { borderColor: theme.border, shadowColor: theme.border }]}
                   onPress={toggleTimerPause}
                   activeOpacity={0.8}
                 >
@@ -657,9 +682,9 @@ export default function QuemSouEuGameScreen() {
                   ]} />
                   <View style={styles.timerIconOverlay}>
                     {isTimerPaused ? (
-                      <Play size={18} color={Colors.text} fill={Colors.text} />
+                      <Play size={18} color="#1C1917" fill="#1C1917" />
                     ) : (
-                      <Pause size={18} color={Colors.text} fill={Colors.text} />
+                      <Pause size={18} color="#1C1917" fill="#1C1917" />
                     )}
                     <Text style={styles.timerPercentageText}>
                       {timeRemaining}s
@@ -675,15 +700,15 @@ export default function QuemSouEuGameScreen() {
             {/* Card Header: Points + Category + Ver Resposta */}
             <View style={styles.cardHeader}>
               <View style={styles.leftHeaderSection}>
-                <View style={styles.pointsBadge}>
-                  <Text style={styles.pointsValue}>{availablePoints}</Text>
-                  <Text style={styles.pointsLabel}>pts</Text>
+                <View style={[styles.pointsBadge, { backgroundColor: theme.warning, borderColor: theme.border, shadowColor: theme.border }]}>
+                  <Text style={[styles.pointsValue, { color: '#1C1917' }]}>{availablePoints}</Text>
+                  <Text style={[styles.pointsLabel, { color: '#1C1917' }]}>pts</Text>
                 </View>
-                <View style={styles.categoryBadge}>
+                <View style={[styles.categoryBadge, { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border }]}>
                   <Text style={styles.categoryIcon}>
                     {CATEGORY_ICONS[currentCard.category] ?? '📖'}
                   </Text>
-                  <Text style={styles.categoryText}>{currentCard.category}</Text>
+                  <Text style={[styles.categoryText, { color: theme.text }]}>{currentCard.category}</Text>
                 </View>
               </View>
 
@@ -691,13 +716,15 @@ export default function QuemSouEuGameScreen() {
                 onPress={handleShowAnswerModal}
                 style={[
                   styles.verRespostaBadge,
-                  isConfirmingAnswer && styles.verRespostaConfirmBadge
+                  { backgroundColor: theme.surface, borderColor: theme.border, shadowColor: theme.border },
+                  isConfirmingAnswer && { backgroundColor: theme.accent2 }
                 ]}
               >
                 <Text
                   style={[
                     styles.verRespostaText,
-                    isConfirmingAnswer && styles.verRespostaConfirmText
+                    { color: theme.text },
+                    isConfirmingAnswer && { color: '#FFFFFF' }
                   ]}
                 >
                   {isConfirmingAnswer ? 'Confirme ver resposta ⚠️' : 'Ver Resposta 👁️'}
@@ -708,8 +735,8 @@ export default function QuemSouEuGameScreen() {
             {/* Answer Reveal (shown after correct guess) */}
             {showAnswer && (
               <View style={styles.answerReveal}>
-                <View style={styles.answerRevealShadow} />
-                <View style={styles.answerRevealFront}>
+                <View style={[styles.answerRevealShadow, { backgroundColor: theme.border }]} />
+                <View style={[styles.answerRevealFront, { backgroundColor: theme.accent1, borderColor: theme.border }]}>
                   <Text style={styles.answerRevealLabel}>RESPOSTA</Text>
                   <Text style={styles.answerRevealText}>{currentCard.answer}</Text>
                 </View>
@@ -719,7 +746,7 @@ export default function QuemSouEuGameScreen() {
             {/* Hint Grid */}
             {!showAnswer && (
               <>
-                <Text style={styles.hintGridLabel}>ESCOLHA UMA DICA:</Text>
+                <Text style={[styles.hintGridLabel, { color: theme.muted }]}>ESCOLHA UMA DICA:</Text>
                 <HintGrid
                   totalHints={currentCard.hints.length}
                   revealedIndices={revealedIndices}
@@ -732,17 +759,17 @@ export default function QuemSouEuGameScreen() {
             {/* Current Hint Display */}
             {!showAnswer && currentHintText && (
               <View style={styles.hintCard}>
-                <View style={styles.hintCardShadow} />
-                <View style={styles.hintCardFront}>
-                  <Text style={styles.hintCardNumber}>Dica {(selectedHintIndex ?? 0) + 1}</Text>
-                  <Text style={styles.hintCardText}>"{currentHintText}"</Text>
+                <View style={[styles.hintCardShadow, { backgroundColor: theme.border }]} />
+                <View style={[styles.hintCardFront, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <Text style={[styles.hintCardNumber, { color: theme.primary }]}>Dica {(selectedHintIndex ?? 0) + 1}</Text>
+                  <Text style={[styles.hintCardText, { color: theme.text }]}>"{currentHintText}"</Text>
                 </View>
               </View>
             )}
 
             {!showAnswer && !currentHintText && (
-              <View style={styles.hintPlaceholder}>
-                <Text style={styles.hintPlaceholderText}>
+              <View style={[styles.hintPlaceholder, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Text style={[styles.hintPlaceholderText, { color: theme.muted }]}>
                   👆 Toque em um número para revelar uma dica
                 </Text>
               </View>
@@ -750,8 +777,8 @@ export default function QuemSouEuGameScreen() {
 
             {/* All hints revealed warning */}
             {allHintsRevealed && !showAnswer && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningText}>
+              <View style={[styles.warningCard, { borderColor: theme.border, shadowColor: theme.border }]}>
+                <Text style={[styles.warningText, { color: '#1C1917' }]}>
                   🔔 Todas as dicas foram reveladas! O próximo acerto vale 1 ponto.
                 </Text>
               </View>
@@ -765,16 +792,16 @@ export default function QuemSouEuGameScreen() {
               {/* Time up: only show next action */}
               {isTimeUp && whoAmIConfig.timerEnabled ? (
                 <BrutalButton variant="surface" size="large" onPress={handlePass}>
-                  <SkipForward size={20} color={Colors.text} style={{ marginRight: 8 }} />
-                  <Text style={styles.buttonLabel}>Próximo</Text>
+                  <SkipForward size={20} color={theme.text} style={{ marginRight: 8 }} />
+                  <Text style={[styles.buttonLabel, { color: theme.text }]}>Próximo</Text>
                 </BrutalButton>
               ) : (
                 <>
                   <View style={styles.actionRow}>
                     <View style={styles.halfAction}>
                       <BrutalButton variant="surface" size="large" onPress={handlePass}>
-                        <SkipForward size={20} color={Colors.text} style={{ marginRight: 4 }} />
-                        <Text style={styles.buttonLabel}>Passar</Text>
+                        <SkipForward size={20} color={theme.text} style={{ marginRight: 4 }} />
+                        <Text style={[styles.buttonLabel, { color: theme.text }]}>Passar</Text>
                       </BrutalButton>
                     </View>
                     <View style={styles.halfAction}>
@@ -805,12 +832,12 @@ export default function QuemSouEuGameScreen() {
           style={styles.photoModalOverlay} 
           onPress={() => setPhotoModalVisible(false)}
         >
-          <View style={styles.photoModalCard}>
-            <Text style={styles.photoModalTitle}>{currentPlayer.name}</Text>
+          <View style={[styles.photoModalCard, { backgroundColor: theme.background, borderColor: theme.border, shadowColor: theme.border }]}>
+            <Text style={[styles.photoModalTitle, { color: theme.text }]}>{currentPlayer.name}</Text>
             {currentPlayer.photoUri && (
               <Image 
                 source={{ uri: currentPlayer.photoUri }} 
-                style={styles.photoModalImage} 
+                style={[styles.photoModalImage, { borderColor: theme.border, backgroundColor: theme.surface }]} 
                 contentFit="contain"
               />
             )}
@@ -836,18 +863,18 @@ export default function QuemSouEuGameScreen() {
         <Pressable style={styles.modalBackdrop} onPress={handleCloseAnswerModal}>
           <View style={styles.modalContainer}>
             {/* Shadow behind */}
-            <View style={styles.modalShadow} />
+            <View style={[styles.modalShadow, { backgroundColor: theme.border }]} />
             
             {/* Front content */}
-            <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-              <Text style={styles.modalTitle}>Resposta da Carta</Text>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]} onPress={(e) => e.stopPropagation()}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Resposta da Carta</Text>
               
-              <View style={styles.answerTextContainer}>
-                <Text style={styles.modalAnswerText}>{currentCard.answer}</Text>
+              <View style={[styles.answerTextContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Text style={[styles.modalAnswerText, { color: theme.text }]}>{currentCard.answer}</Text>
               </View>
 
               {/* Reverse Progress Bar */}
-              <View style={styles.progressBarTrack}>
+              <View style={[styles.progressBarTrack, { borderColor: theme.border }]}>
                 <Animated.View style={[
                   styles.progressBarFill,
                   {
@@ -855,7 +882,7 @@ export default function QuemSouEuGameScreen() {
                       inputRange: [0, 1],
                       outputRange: ['0%', '100%'],
                     }),
-                    backgroundColor: Colors.accent2,
+                    backgroundColor: theme.accent2,
                   }
                 ]} />
               </View>
@@ -881,7 +908,6 @@ export default function QuemSouEuGameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flex: 1,
@@ -897,7 +923,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 16,
-    color: Colors.muted,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
@@ -909,7 +934,6 @@ const styles = StyleSheet.create({
   scoreboardLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 11,
-    color: Colors.muted,
     marginBottom: 6,
     letterSpacing: 1,
   },
@@ -918,21 +942,15 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   playerCard: {
-    backgroundColor: Colors.surface,
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     minWidth: 90,
-    shadowColor: Colors.border,
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 2,
-  },
-  playerCardActive: {
-    backgroundColor: Colors.primary,
   },
   playerCardContent: {
     flexDirection: 'row',
@@ -942,19 +960,11 @@ const styles = StyleSheet.create({
   playerName: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.text,
     flex: 1,
-  },
-  playerNameActive: {
-    color: '#FFFFFF',
   },
   playerPoints: {
     fontFamily: Fonts.heading,
     fontSize: 16,
-    color: Colors.text,
-  },
-  playerPointsActive: {
-    color: '#FFFFFF',
   },
   // Turn Banner
   turnSection: {
@@ -967,13 +977,10 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   turnBannerLeft: {
-    backgroundColor: Colors.primary,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: 8,
     padding: 10,
     justifyContent: 'center',
-    shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1008,14 +1015,14 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: '#FFFFFF',
   },
   turnBannerAvatarPlaceholderLarge: {
     width: 50,
     height: 50,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: '#FFFFFF',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1023,7 +1030,7 @@ const styles = StyleSheet.create({
   turnBannerAvatarPlaceholderLargeText: {
     fontFamily: Fonts.heading,
     fontSize: 22,
-    color: Colors.text,
+    color: '#1C1917',
   },
   turnBannerNameLarge: {
     fontFamily: Fonts.heading,
@@ -1035,14 +1042,12 @@ const styles = StyleSheet.create({
     flex: 0.25,
     backgroundColor: '#E5E7EB',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-    shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1063,7 +1068,7 @@ const styles = StyleSheet.create({
   timerPercentageText: {
     fontFamily: Fonts.body,
     fontSize: 10,
-    color: Colors.text,
+    color: '#1C1917',
     marginTop: 1,
   },
   // Card Header
@@ -1083,13 +1088,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusButton,
     paddingHorizontal: 12,
     height: 48,
-    shadowColor: Colors.border,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1101,19 +1103,15 @@ const styles = StyleSheet.create({
   categoryText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.text,
   },
   pointsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.warning,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusButton,
     paddingHorizontal: 14,
     height: 48,
-    shadowColor: Colors.border,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1122,41 +1120,28 @@ const styles = StyleSheet.create({
   pointsValue: {
     fontFamily: Fonts.heading,
     fontSize: 22,
-    color: Colors.text,
   },
   pointsLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 13,
-    color: Colors.text,
     marginTop: 2,
   },
   verRespostaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusButton,
     paddingHorizontal: 10,
     height: 48,
-    shadowColor: Colors.border,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 3,
   },
-  verRespostaConfirmBadge: {
-    backgroundColor: Colors.accent2,
-  },
   verRespostaText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 12,
-    color: Colors.text,
-  },
-  verRespostaConfirmText: {
-    color: '#FFFFFF',
-    fontSize: 10.5,
   },
   // Answer Reveal
   answerReveal: {
@@ -1169,15 +1154,12 @@ const styles = StyleSheet.create({
     left: 6,
     right: -6,
     bottom: -6,
-    backgroundColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     zIndex: 0,
   },
   answerRevealFront: {
     zIndex: 1,
-    backgroundColor: Colors.accent1,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 20,
     alignItems: 'center',
@@ -1199,7 +1181,6 @@ const styles = StyleSheet.create({
   hintGridLabel: {
     fontFamily: Fonts.bodyBold,
     fontSize: 13,
-    color: Colors.muted,
     letterSpacing: 1,
     marginBottom: 4,
   },
@@ -1215,15 +1196,12 @@ const styles = StyleSheet.create({
     left: 5,
     right: -5,
     bottom: -5,
-    backgroundColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     zIndex: 0,
   },
   hintCardFront: {
     zIndex: 1,
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 20,
     minHeight: 90,
@@ -1232,22 +1210,18 @@ const styles = StyleSheet.create({
   hintCardNumber: {
     fontFamily: Fonts.bodyBold,
     fontSize: 11,
-    color: Colors.primary,
     letterSpacing: 1,
     marginBottom: 8,
   },
   hintCardText: {
     fontFamily: Fonts.subheading,
     fontSize: 20,
-    color: Colors.text,
     lineHeight: 28,
     fontStyle: 'italic',
   },
   hintPlaceholder: {
     marginTop: 16,
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     borderStyle: 'dashed',
     padding: 24,
@@ -1256,17 +1230,14 @@ const styles = StyleSheet.create({
   hintPlaceholderText: {
     fontFamily: Fonts.body,
     fontSize: 14,
-    color: Colors.muted,
     textAlign: 'center',
   },
   warningCard: {
     backgroundColor: '#FEF08A',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 12,
     marginTop: 12,
-    shadowColor: Colors.border,
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1275,7 +1246,6 @@ const styles = StyleSheet.create({
   warningText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 13,
-    color: Colors.text,
     lineHeight: 18,
   },
   // Actions
@@ -1294,7 +1264,6 @@ const styles = StyleSheet.create({
   buttonLabel: {
     fontFamily: Fonts.subheading,
     fontSize: 17,
-    color: Colors.text,
   },
   skipCardButton: {
     marginTop: 4,
@@ -1303,9 +1272,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1328,14 +1295,11 @@ const styles = StyleSheet.create({
     left: Metrics.shadowOffset,
     right: -Metrics.shadowOffset,
     bottom: -Metrics.shadowOffset,
-    backgroundColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     zIndex: 0,
   },
   modalContent: {
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 24,
     zIndex: 1,
@@ -1343,14 +1307,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontFamily: Fonts.heading,
     fontSize: 24,
-    color: Colors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
   answerTextContainer: {
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 8,
     padding: 20,
     alignItems: 'center',
@@ -1360,14 +1321,12 @@ const styles = StyleSheet.create({
   modalAnswerText: {
     fontFamily: Fonts.heading,
     fontSize: 32,
-    color: Colors.text,
     textAlign: 'center',
   },
   progressBarTrack: {
     height: 12,
     backgroundColor: '#E5E7EB',
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 6,
     overflow: 'hidden',
     marginBottom: 20,
@@ -1403,44 +1362,18 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: Colors.border,
   },
   scoreboardAvatarPlaceholder: {
     width: 24,
     height: 24,
     borderRadius: 6,
-    backgroundColor: Colors.background,
     borderWidth: 1.5,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scoreboardAvatarPlaceholderText: {
     fontSize: 11,
     fontFamily: Fonts.heading,
-    color: Colors.text,
-  },
-  turnBannerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  turnBannerAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    backgroundColor: Colors.background,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  turnBannerAvatarPlaceholderText: {
-    fontSize: 14,
-    fontFamily: Fonts.heading,
-    color: Colors.text,
   },
   photoModalOverlay: {
     flex: 1,
@@ -1450,15 +1383,12 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   photoModalCard: {
-    backgroundColor: Colors.background,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 16,
     width: '100%',
     maxWidth: 380,
     alignItems: 'center',
-    shadowColor: Colors.border,
     shadowOffset: { width: Metrics.shadowOffset, height: Metrics.shadowOffset },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -1467,7 +1397,6 @@ const styles = StyleSheet.create({
   photoModalTitle: {
     fontFamily: Fonts.heading,
     fontSize: 22,
-    color: Colors.text,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -1476,8 +1405,10 @@ const styles = StyleSheet.create({
     height: 280,
     borderRadius: 8,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+  },
+  innerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
   },
 });
-

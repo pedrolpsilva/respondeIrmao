@@ -1,9 +1,10 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
 import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { useTheme } from '@/hooks/use-theme';
 import { useRouter } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -12,8 +13,9 @@ import { playClickSound } from '@/services/soundManager';
 
 export default function ConfigScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { gameMode, config, updateConfig, resetGame } = useGame();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
 
   // Local states for UI, sync to context on Submit
   const [selectedLevel, setSelectedLevel] = useState(
@@ -44,7 +46,7 @@ export default function ConfigScreen() {
     value: string,
     current: string,
     onSelect: (val: string) => void,
-    activeColor: string = Colors.primary
+    activeColor: string = theme.primary
   ) => {
     const isSelected = value === current;
     return (
@@ -57,17 +59,18 @@ export default function ConfigScreen() {
         }}
         style={[
           styles.segmentOption,
+          { borderRightColor: theme.border },
           isSelected && {
             backgroundColor: activeColor,
-            borderColor: Colors.border,
-            // transform: [{ translateX: 2 }, { translateY: 2 }],
+            borderColor: theme.border,
           }
         ]}
       >
         {isSelected && <View style={styles.segmentActiveShadow} />}
         <Text style={[
           styles.segmentText,
-          isSelected && { color: activeColor === Colors.surface ? Colors.text : '#FFFFFF', fontFamily: Fonts.bodyBold }
+          { color: theme.text },
+          isSelected && { color: activeColor === theme.surface ? theme.text : '#FFFFFF', fontFamily: Fonts.bodyBold }
         ]}>
           {label}
         </Text>
@@ -77,35 +80,35 @@ export default function ConfigScreen() {
 
   const levelSection = gameMode !== 'teologico' && (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Nível de Dificuldade</Text>
-      <View style={styles.segmentedContainer}>
+      <Text style={[styles.sectionLabel, { color: theme.text }]}>Nível de Dificuldade</Text>
+      <View style={[styles.segmentedContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
         {gameMode === 'compartilhar' ? (
           <>
-            {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, Colors.accent1)}
-            {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, Colors.warning)}
-            {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, Colors.accent2)}
+            {renderSegment('Comunhão', 'comunhao', selectedLevel, setSelectedLevel, theme.accent1)}
+            {renderSegment('Testemunho', 'testemunho', selectedLevel, setSelectedLevel, theme.warning)}
+            {renderSegment('Confissão', 'confissao', selectedLevel, setSelectedLevel, theme.accent2)}
           </>
         ) : (
           <>
-            {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, Colors.accent1)}
-            {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, Colors.warning)}
-            {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, Colors.accent2)}
+            {renderSegment('Multidão', 'multidao', selectedLevel, setSelectedLevel, theme.accent1)}
+            {renderSegment('Discípulo', 'discipulo', selectedLevel, setSelectedLevel, theme.warning)}
+            {renderSegment('Apóstolo', 'apostolo', selectedLevel, setSelectedLevel, theme.accent2)}
           </>
         )}
       </View>
 
       {/* include lower levels switch */}
-      <View style={[styles.toggleCard, { marginTop: 12 }]}>
+      <View style={[styles.toggleCard, { marginTop: 12, backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.toggleTextWrapper}>
-          <Text style={styles.toggleTitle}>Utilizar palavras de níveis menores</Text>
-          <Text style={styles.toggleSubtitle}>
+          <Text style={[styles.toggleTitle, { color: theme.text }]}>Utilizar palavras de níveis menores</Text>
+          <Text style={[styles.toggleSubtitle, { color: theme.textSecondary }]}>
             Palavras de níveis mais fáceis aparecerão em níveis mais difíceis.
           </Text>
         </View>
         <Switch
-          trackColor={{ false: Colors.muted, true: Colors.primary }}
-          thumbColor={Colors.border}
-          ios_backgroundColor={Colors.muted}
+          trackColor={{ false: theme.muted, true: theme.primary }}
+          thumbColor={theme.border}
+          ios_backgroundColor={theme.muted}
           onValueChange={setIncludeLower}
           value={includeLower}
         />
@@ -116,29 +119,29 @@ export default function ConfigScreen() {
   const scoringSection = (gameMode === 'quiz' || gameMode === 'teologico') ? (
     <>
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Pontuação Alvo (Para Vencer)</Text>
-        <View style={styles.segmentedContainer}>
-          {renderSegment('10 pts', '10', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
-          {renderSegment('15 pts', '15', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
-          {renderSegment('20 pts', '20', targetScore.toString(), (v) => setTargetScore(parseInt(v)), Colors.primary)}
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>Pontuação Alvo (Para Vencer)</Text>
+        <View style={[styles.segmentedContainer, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+          {renderSegment('10 pts', '10', targetScore.toString(), (v) => setTargetScore(parseInt(v)), theme.primary)}
+          {renderSegment('15 pts', '15', targetScore.toString(), (v) => setTargetScore(parseInt(v)), theme.primary)}
+          {renderSegment('20 pts', '20', targetScore.toString(), (v) => setTargetScore(parseInt(v)), theme.primary)}
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Tempo por Turno</Text>
-        <View style={styles.timerCard}>
+        <Text style={[styles.sectionLabel, { color: theme.text }]}>Tempo por Turno</Text>
+        <View style={[styles.timerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Pressable
             onPress={() => {
               Vibration.vibrate(10);
               playClickSound();
               setTimer(prev => Math.max(15, prev - 15));
             }}
-            style={styles.timerButton}
+            style={[styles.timerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
           >
-            <Minus color={Colors.border} size={24} strokeWidth={3} />
+            <Minus color={theme.text} size={24} strokeWidth={3} />
           </Pressable>
           <View style={styles.timerDisplay}>
-            <Text style={styles.timerValue}>{timer}s</Text>
+            <Text style={[styles.timerValue, { color: theme.primary }]}>{timer}s</Text>
           </View>
           <Pressable
             onPress={() => {
@@ -146,38 +149,38 @@ export default function ConfigScreen() {
               playClickSound();
               setTimer(prev => Math.min(120, prev + 15));
             }}
-            style={styles.timerButton}
+            style={[styles.timerButton, { backgroundColor: theme.background, borderColor: theme.border }]}
           >
-            <Plus color={Colors.border} size={24} strokeWidth={3} />
+            <Plus color={theme.text} size={24} strokeWidth={3} />
           </Pressable>
         </View>
       </View>
     </>
   ) : (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Perguntas Repetidas</Text>
-      <View style={[styles.toggleCard, { marginBottom: 12 }]}>
+      <Text style={[styles.sectionLabel, { color: theme.text }]}>Perguntas Repetidas</Text>
+      <View style={[styles.toggleCard, { marginBottom: 12, backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.toggleTextWrapper}>
-          <Text style={styles.toggleTitle}>Para o mesmo jogador</Text>
-          <Text style={styles.toggleSubtitle}>Uma pergunta pode cair de novo para a mesma pessoa.</Text>
+          <Text style={[styles.toggleTitle, { color: theme.text }]}>Para o mesmo jogador</Text>
+          <Text style={[styles.toggleSubtitle, { color: theme.textSecondary }]}>Uma pergunta pode cair de novo para a mesma pessoa.</Text>
         </View>
         <Switch
-          trackColor={{ false: Colors.muted, true: Colors.primary }}
-          thumbColor={Colors.border}
-          ios_backgroundColor={Colors.muted}
+          trackColor={{ false: theme.muted, true: theme.primary }}
+          thumbColor={theme.border}
+          ios_backgroundColor={theme.muted}
           onValueChange={setRepeatSame}
           value={repeatSame}
         />
       </View>
-      <View style={styles.toggleCard}>
+      <View style={[styles.toggleCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.toggleTextWrapper}>
-          <Text style={styles.toggleTitle}>Para outros jogadores</Text>
-          <Text style={styles.toggleSubtitle}>Uma pergunta já respondida pode cair para outra pessoa.</Text>
+          <Text style={[styles.toggleTitle, { color: theme.text }]}>Para outros jogadores</Text>
+          <Text style={[styles.toggleSubtitle, { color: theme.textSecondary }]}>Uma pergunta já respondida pode cair para outra pessoa.</Text>
         </View>
         <Switch
-          trackColor={{ false: Colors.muted, true: Colors.primary }}
-          thumbColor={Colors.border}
-          ios_backgroundColor={Colors.muted}
+          trackColor={{ false: theme.muted, true: theme.primary }}
+          thumbColor={theme.border}
+          ios_backgroundColor={theme.muted}
           onValueChange={setRepeatOther}
           value={repeatOther}
         />
@@ -186,22 +189,23 @@ export default function ConfigScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {isTabletLandscape ? (
         // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
         <View style={styles.tabletWrapper}>
           <BrutalHeader title="Configurar Partida" />
+          <ConfigBannerAd />
           <View style={styles.tabletRow}>
             {/* Left column: mode subtitle + level section */}
             <View style={styles.tabletLeft}>
               <View style={styles.headerInfo}>
-                <Text style={styles.subtitle}>
+                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                   Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
                 </Text>
               </View>
               {gameMode === 'teologico' && (
-                <View style={styles.warningCard}>
-                  <Text style={styles.warningText}>
+                <View style={[styles.warningCard, { borderColor: theme.border }]}>
+                  <Text style={[styles.warningText, { color: '#1C1917' }]}>
                     ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
                   </Text>
                 </View>
@@ -221,18 +225,19 @@ export default function ConfigScreen() {
         </View>
       ) : (
         // ── PORTRAIT: original layout ────────────────────────────────────────
-        <View style={styles.inner}>
+        <View style={[styles.inner, isTablet && styles.innerTabletPortrait]}>
           <BrutalHeader title="Configurar Partida" />
+          <ConfigBannerAd />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <View style={styles.headerInfo}>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                 Ajuste as regras para o Modo {gameMode === 'teologico' ? 'Quiz Teológico' : gameMode === 'quiz' ? 'Quiz' : 'Compartilhar'}
               </Text>
             </View>
 
             {gameMode === 'teologico' && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningText}>
+              <View style={[styles.warningCard, { borderColor: theme.border }]}>
+                <Text style={[styles.warningText, { color: '#1C1917' }]}>
                   ⚠️ Obs: As respostas não precisam ser exatas como está no jogo, basta que os jogadores tenham a compreensão da resposta correta.
                 </Text>
               </View>
@@ -256,7 +261,6 @@ export default function ConfigScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flex: 1,
@@ -274,7 +278,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: Fonts.body,
     fontSize: 16,
-    color: Colors.muted,
     marginTop: 4,
   },
   section: {
@@ -283,15 +286,12 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: Fonts.subheading,
     fontSize: 18,
-    color: Colors.text,
     marginBottom: 12,
   },
   segmentedContainer: {
     flexDirection: 'row',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusButton,
-    backgroundColor: Colors.surface,
     overflow: 'hidden',
     height: 56,
   },
@@ -300,7 +300,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRightWidth: 1.5,
-    borderRightColor: Colors.border,
   },
   segmentActiveShadow: {
     ...StyleSheet.absoluteFillObject,
@@ -309,15 +308,12 @@ const styles = StyleSheet.create({
   segmentText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.text,
   },
   timerCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 16,
   },
@@ -325,9 +321,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,15 +332,12 @@ const styles = StyleSheet.create({
   timerValue: {
     fontFamily: Fonts.heading,
     fontSize: 36,
-    color: Colors.primary,
   },
   toggleCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 20,
   },
@@ -357,13 +348,11 @@ const styles = StyleSheet.create({
   toggleTitle: {
     fontFamily: Fonts.subheading,
     fontSize: 18,
-    color: Colors.text,
     marginBottom: 4,
   },
   toggleSubtitle: {
     fontFamily: Fonts.body,
     fontSize: 13,
-    color: Colors.muted,
   },
   footer: {
     marginTop: 16,
@@ -371,11 +360,9 @@ const styles = StyleSheet.create({
   warningCard: {
     backgroundColor: '#FEF08A',
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 16,
     marginBottom: 24,
-    shadowColor: Colors.border,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -384,7 +371,6 @@ const styles = StyleSheet.create({
   warningText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.text,
     lineHeight: 20,
   },
   // ── Tablet Landscape ───────────────────────────────────────────────────
@@ -404,5 +390,9 @@ const styles = StyleSheet.create({
   tabletRight: {
     flex: 5,
   },
+  innerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
+  },
 });
-

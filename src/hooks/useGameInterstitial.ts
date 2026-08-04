@@ -4,6 +4,7 @@ import {
   InterstitialAd,
   TestIds,
 } from 'react-native-google-mobile-ads';
+import { useSettingsContext } from '@/hooks/useSettingsContext';
 
 // ─── IDs ────────────────────────────────────────────────────────────────────
 // Troque __DEV__ por false para forçar o ID de produção mesmo em dev
@@ -16,16 +17,18 @@ const LOG_TAG = '[AdMob/Interstitial]';
 // ─── Hook ────────────────────────────────────────────────────────────────────
 /**
  * Carrega um InterstitialAd e expõe `showAdThenNavigate(callback)`.
- * - Se o anúncio estiver carregado, exibe-o e chama o callback ao fechar.
- * - Se o anúncio ainda não estiver pronto, chama o callback diretamente
- *   (nunca bloqueia a navegação).
+ * - Se o anúncio estiver carregado e o Modo Pró NÃO estiver ativado, exibe-o e chama o callback ao fechar.
+ * - Se o anúncio ainda não estiver pronto ou Modo Pró ativado, chama o callback diretamente.
  */
 export function useGameInterstitial() {
+  const { isProMode } = useSettingsContext();
   const interstitialRef = useRef<InterstitialAd | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
   const pendingCallbackRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (isProMode) return;
+
     console.log(`${LOG_TAG} Criando instância do anúncio — unitId: ${AD_UNIT_ID}`);
     const ad = InterstitialAd.createForAdRequest(AD_UNIT_ID, {
       requestNonPersonalizedAdsOnly: false,
@@ -72,13 +75,19 @@ export function useGameInterstitial() {
       unsubscribeClosed();
       unsubscribeOpened();
     };
-  }, []);
+  }, [isProMode]);
 
   /**
    * Tenta exibir o interstitial.
-   * @param onAfterAd Callback chamado após o anúncio fechar (ou imediatamente se não estiver pronto)
+   * @param onAfterAd Callback chamado após o anúncio fechar (ou imediatamente se não estiver pronto ou Modo PRO)
    */
   const showAdThenNavigate = (onAfterAd: () => void) => {
+    if (isProMode) {
+      console.log(`${LOG_TAG} 👑 Modo PRÓ ativo: anúncio ignorado.`);
+      onAfterAd();
+      return;
+    }
+
     const ad = interstitialRef.current;
 
     if (ad && adLoaded) {
@@ -93,5 +102,5 @@ export function useGameInterstitial() {
     }
   };
 
-  return { showAdThenNavigate, adLoaded };
+  return { showAdThenNavigate, adLoaded: isProMode ? false : adLoaded };
 }

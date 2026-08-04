@@ -1,13 +1,15 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalInput from '@/components/ui/BrutalInput';
 import BrutalModal from '@/components/ui/BrutalModal';
+import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
 import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { GameMode, useGame } from '@/hooks/useGameContext';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { useRouter } from 'expo-router';
-import { Star, RefreshCw } from 'lucide-react-native';
+import { RefreshCw, Settings } from 'lucide-react-native';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { ActivityIndicator, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const STEP_TITLES: Record<string, string> = {
   nomes: 'Nomes dos Jogadores',
@@ -23,9 +25,10 @@ const STEP_TITLES: Record<string, string> = {
 };
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const { setGameMode, resetGame, setPlayers, syncQuestions } = useGame();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
 
   const [syncModalVisible, setSyncModalVisible] = React.useState(false);
   const [syncStatus, setSyncStatus] = React.useState<'syncing' | 'success' | 'error'>('syncing');
@@ -63,7 +66,7 @@ export default function HomeScreen() {
       await syncQuestions((stepKey, status) => {
         setSyncSteps(prev => ({ ...prev, [stepKey]: status }));
       });
-      
+
       // Auto-complete pending items to success
       setSyncSteps(prev => {
         const next = { ...prev };
@@ -211,59 +214,89 @@ export default function HomeScreen() {
 
   const gameButtons = (
     <View style={[styles.mainActions, isTabletLandscape && styles.mainActionsTablet]}>
-      <BrutalButton
-        variant="primary"
-        fullWidth={true}
-        onPress={() => handleStart('compartilhar')}
-      >
-        <Text style={{
-          fontFamily: Fonts.subheading,
-          fontWeight: '700',
-          color: '#FFFFFF',
-          fontSize: isTabletLandscape ? 20 : 18,
-        }}>
-          COMPARTILHAR
-        </Text>
-        <View style={styles.badgeContainer}>
-          <Star size={16} color={Colors.primary} fill={Colors.primary} />
+      {/* 1. Modos em grupo */}
+      <Text style={[styles.sectionTitle, { color: theme.muted }]}>
+        Modos em grupo
+      </Text>
+
+      <View style={styles.groupGrid}>
+        <View style={styles.gridRow}>
+          <View style={styles.gridSquare}>
+            <BrutalButton
+              variant="primary"
+              fullWidth={true}
+              style={styles.squareButtonStyle}
+              onPress={() => handleStart('compartilhar')}
+            >
+              <View style={styles.squareButtonContent}>
+                <Text style={styles.squareEmoji}>🤝</Text>
+                <Text style={styles.squareButtonText}>COMPARTILHAR</Text>
+              </View>
+            </BrutalButton>
+          </View>
+
+          <View style={styles.gridSquare}>
+            <BrutalButton
+              variant="accent1"
+              fullWidth={true}
+              style={styles.squareButtonStyle}
+              onPress={() => handleStart('quiz')}
+            >
+              <View style={styles.squareButtonContent}>
+                <Text style={styles.squareEmoji}>📖</Text>
+                <Text style={styles.squareButtonText}>QUIZ BÍBLICO</Text>
+              </View>
+            </BrutalButton>
+          </View>
         </View>
-      </BrutalButton>
 
-      <BrutalButton
-        variant="accent1"
-        fullWidth={true}
-        onPress={() => handleStart('quiz')}
-      >
-        QUIZ BÍBLICO
-      </BrutalButton>
+        <View style={styles.gridRow}>
+          <View style={styles.gridSquare}>
+            <BrutalButton
+              variant="accent2"
+              fullWidth={true}
+              style={styles.squareButtonStyle}
+              onPress={() => handleStart('teologico')}
+            >
+              <View style={styles.squareButtonContent}>
+                <Text style={styles.squareEmoji}>📜</Text>
+                <Text style={styles.squareButtonText}>QUIZ TEOLÓGICO</Text>
+              </View>
+            </BrutalButton>
+          </View>
 
-      <BrutalButton
-        variant="accent2"
-        fullWidth={true}
-        onPress={() => handleStart('teologico')}
-      >
-        QUIZ TEOLÓGICO
-      </BrutalButton>
+          <View style={styles.gridSquare}>
+            <BrutalButton
+              variant="purple"
+              fullWidth={true}
+              style={styles.squareButtonStyle}
+              onPress={handleStartQuemSouEu}
+            >
+              <View style={styles.squareButtonContent}>
+                <Text style={styles.squareEmoji}>👤</Text>
+                <Text style={styles.squareButtonText}>QUEM SOU EU?</Text>
+              </View>
+            </BrutalButton>
+          </View>
+        </View>
+      </View>
 
-      <BrutalButton
-        variant="purple"
-        fullWidth={true}
-        onPress={handleStartQuemSouEu}
-      >
-        QUEM SOU EU?
-      </BrutalButton>
+      {/* 2. Modo individual */}
+      <Text style={[styles.sectionTitle, { color: theme.muted, marginTop: 20 }]}>
+        Modo individual
+      </Text>
 
       <BrutalButton
         variant="secondary"
         fullWidth={true}
         onPress={() => {
-          setGameMode('torre');
-          setPlayers([{ id: '1', name: 'Jogador', points: 0 }]);
-          resetGame();
-          router.push('/torre');
+          router.push('/torre-config' as any);
         }}
       >
-        TORRE DE BABEL (solo)
+        <View style={styles.soloButtonRow}>
+          <Text style={styles.soloButtonEmoji}>🏰</Text>
+          <Text style={styles.soloButtonText}>TORRE DE BABEL</Text>
+        </View>
       </BrutalButton>
     </View>
   );
@@ -290,29 +323,31 @@ export default function HomeScreen() {
           </BrutalButton>
         </View>
       </View>
-
-      <View style={styles.feedbackSection}>
-        <BrutalButton
-          variant="primary"
-          size="small"
-          onPress={() => setFeedbackVisible(true)}
-        >
-          Feedback
-        </BrutalButton>
-      </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Floating Sync Button */}
-      <TouchableOpacity
-        style={styles.floatingSyncBtn}
-        onPress={handleSyncSheet}
-        activeOpacity={0.8}
-      >
-        <RefreshCw size={22} color={Colors.text} />
-      </TouchableOpacity>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Top Right Actions: Database Reload + Settings Gear */}
+      <View style={styles.topRightActions}>
+        <TouchableOpacity
+          style={[styles.headerActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+          onPress={handleSyncSheet}
+          activeOpacity={0.8}
+          accessibilityLabel="Carregar base de dados"
+        >
+          <RefreshCw size={22} color={theme.text} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.headerActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
+          onPress={() => router.push('/settings')}
+          activeOpacity={0.8}
+          accessibilityLabel="Configurações"
+        >
+          <Settings size={22} color={theme.text} />
+        </TouchableOpacity>
+      </View>
 
       {/* Sync Steps Modal */}
       <Modal
@@ -328,30 +363,30 @@ export default function HomeScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.syncCard}>
             <Text style={styles.syncTitle}>Sincronizando Planilha</Text>
-            
+
             <ScrollView style={styles.stepsList} showsVerticalScrollIndicator={false}>
               {Object.keys(STEP_TITLES).map((key) => {
                 const title = STEP_TITLES[key];
                 const status = syncSteps[key] || 'pending';
-                
+
                 let statusText = 'Pendente';
-                let statusColor = Colors.muted;
+                let statusColor: string = theme.muted;
                 let statusIcon = '⏳';
-                
+
                 if (status === 'loading') {
                   statusText = 'Baixando...';
-                  statusColor = '#0052cc';
+                  statusColor = theme.primary;
                   statusIcon = '🔄';
                 } else if (status === 'success') {
                   statusText = 'Sucesso';
-                  statusColor = '#107c41';
+                  statusColor = theme.accent1;
                   statusIcon = '✅';
                 } else if (status === 'error') {
                   statusText = 'Erro';
-                  statusColor = Colors.error;
+                  statusColor = theme.accent2;
                   statusIcon = '❌';
                 }
-                
+
                 return (
                   <View key={key} style={styles.stepRow}>
                     <Text style={styles.stepName}>{title}</Text>
@@ -373,7 +408,7 @@ export default function HomeScreen() {
                 </View>
               ) : syncStatus === 'success' ? (
                 <View style={styles.actionFooter}>
-                  <Text style={styles.syncSuccessText}>Sincronização concluída!</Text>
+                  <Text style={[styles.syncSuccessText, { color: theme.accent1 }]}>Sincronização concluída!</Text>
                   <BrutalButton
                     variant="primary"
                     fullWidth={true}
@@ -384,7 +419,7 @@ export default function HomeScreen() {
                 </View>
               ) : (
                 <View style={styles.actionFooter}>
-                  <Text style={styles.syncErrorText}>Algumas abas não puderam ser baixadas.</Text>
+                  <Text style={[styles.syncErrorText, { color: theme.accent2 }]}>Algumas abas não puderam ser baixadas.</Text>
                   <BrutalButton
                     variant="surface"
                     fullWidth={true}
@@ -419,7 +454,7 @@ export default function HomeScreen() {
         </View>
       ) : (
         // ── PORTRAIT: original single-column layout ───────────────────────────
-        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContainer, isTablet && styles.scrollContainerTabletPortrait]} showsVerticalScrollIndicator={false}>
           {/* Header Logo Section */}
           <View style={styles.logoSection}>
             <Text style={styles.logoTextTop}>RESPONDE,</Text>
@@ -430,6 +465,10 @@ export default function HomeScreen() {
 
           {gameButtons}
           {secondaryButtons}
+
+          <View style={styles.bottomAdContainer}>
+            <ConfigBannerAd />
+          </View>
         </ScrollView>
       )}
 
@@ -517,8 +556,67 @@ const styles = StyleSheet.create({
   mainActions: {
     flexDirection: 'column',
     width: '100%',
-    gap: 16,
-    marginTop: 32,
+    gap: 8,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontFamily: Fonts.bodyBold,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  groupGrid: {
+    width: '100%',
+    gap: 12,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  gridSquare: {
+    flex: 1,
+  },
+  squareButtonStyle: {
+    height: 90,
+  },
+  squareButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  squareEmoji: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  squareButtonText: {
+    fontFamily: Fonts.subheading,
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  soloButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  soloButtonEmoji: {
+    fontSize: 20,
+  },
+  soloButtonText: {
+    fontFamily: Fonts.subheading,
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#FFFFFF',
+  },
+  bottomAdContainer: {
+    marginTop: 28,
+    marginBottom: -20,
   },
   gridItemText: {
     fontSize: 18,
@@ -580,9 +678,9 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: '700',
     textAlign: 'center',
-    width: '80%',
+    width: '85%',
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 6,
   },
   // ── Tablet Landscape layout ──────────────────────────────────────────────
   tabletRow: {
@@ -614,21 +712,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 10,
   },
-  // ── Sync Modal & Floating Button Styles ───────────────────────────────────
-  floatingSyncBtn: {
+  // ── Sync Modal & Header Actions Styles ───────────────────────────────────
+  topRightActions: {
     position: 'absolute',
     top: 16,
     right: 16,
     zIndex: 99,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerActionBtn: {
     width: 48,
     height: 48,
     borderRadius: Metrics.radiusButton,
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.border,
+    shadowColor: '#000000',
     shadowOffset: { width: Metrics.shadowOffset, height: Metrics.shadowOffset },
     shadowOpacity: 1,
     shadowRadius: 0,
@@ -714,16 +815,19 @@ const styles = StyleSheet.create({
   syncSuccessText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 15,
-    color: '#107c41',
     textAlign: 'center',
     marginBottom: 4,
   },
   syncErrorText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 15,
-    color: Colors.error,
     textAlign: 'center',
     marginBottom: 4,
+  },
+  scrollContainerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
   },
 });
 

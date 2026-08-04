@@ -1,8 +1,10 @@
 import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalHeader from '@/components/ui/BrutalHeader';
-import { Colors, Fonts, Metrics } from '@/constants/theme';
+import { Fonts, Metrics } from '@/constants/theme';
 import { useGame } from '@/hooks/useGameContext';
+import { useGameInterstitial } from '@/hooks/useGameInterstitial';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { useTheme } from '@/hooks/use-theme';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Home, RotateCcw, Trophy } from 'lucide-react-native';
@@ -11,8 +13,10 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function ResultsScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const { showAdThenNavigate } = useGameInterstitial();
   const { players, resetGame, gameMode } = useGame();
-  const { isTabletLandscape } = useTabletLandscape();
+  const { isTablet, isTabletLandscape } = useTabletLandscape();
 
   const sortedPlayers = useMemo(() => {
     return [...players].sort((a, b) => b.points - a.points);
@@ -23,64 +27,68 @@ export default function ResultsScreen() {
 
   const handleRestart = () => {
     resetGame();
-    if (gameMode === 'quem-sou-eu') {
-      router.replace('/quem-sou-eu-config');
-    } else {
-      router.replace('/players');
-    }
+    showAdThenNavigate(() => {
+      if (gameMode === 'quem-sou-eu') {
+        router.replace('/quem-sou-eu-config');
+      } else {
+        router.replace('/players');
+      }
+    });
   };
 
   const handleExit = () => {
     resetGame();
-    router.replace('/');
+    showAdThenNavigate(() => {
+      router.replace('/');
+    });
   };
 
   if (!winner) return null;
 
   const winnerCard = (
     <View style={styles.winnerCardContainer}>
-      <View style={styles.winnerCardShadow} />
-      <View style={styles.winnerCardFront}>
-        <View style={styles.avatarFrame}>
+      <View style={[styles.winnerCardShadow, { backgroundColor: theme.border }]} />
+      <View style={[styles.winnerCardFront, { backgroundColor: theme.warning, borderColor: theme.border }]}>
+        <View style={[styles.avatarFrame, { borderColor: theme.border }]}>
           {winner.photoUri ? (
             <Image source={{ uri: winner.photoUri }} style={styles.winnerPhoto} />
           ) : (
-            <View style={styles.winnerPhotoPlaceholder}>
-              <Text style={styles.winnerPhotoPlaceholderText}>{winner.name.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.winnerPhotoPlaceholder, { backgroundColor: theme.background }]}>
+              <Text style={[styles.winnerPhotoPlaceholderText, { color: theme.text }]}>{winner.name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
-          <View style={styles.miniTrophyBadge}>
-            <Trophy size={16} color={Colors.border} fill={Colors.warning} strokeWidth={2.5} />
+          <View style={[styles.miniTrophyBadge, { borderColor: theme.border }]}>
+            <Trophy size={16} color={theme.border} fill={theme.warning} strokeWidth={2.5} />
           </View>
         </View>
-        <Text style={styles.winnerTextSmall}>GRANDE VENCEDOR</Text>
-        <Text style={styles.winnerName}>{winner.name}</Text>
-        <View style={styles.winnerBadge}>
-          <Text style={styles.winnerBadgeText}>{winner.points} Pontos</Text>
+        <Text style={[styles.winnerTextSmall, { color: '#1C1917' }]}>GRANDE VENCEDOR</Text>
+        <Text style={[styles.winnerName, { color: '#1C1917' }]}>{winner.name}</Text>
+        <View style={[styles.winnerBadge, { borderColor: theme.border }]}>
+          <Text style={[styles.winnerBadgeText, { color: '#1C1917' }]}>{winner.points} Pontos</Text>
         </View>
       </View>
     </View>
   );
 
   const rankingCard = runnersUp.length > 0 ? (
-    <View style={styles.rankingContainer}>
-      <Text style={styles.rankingTitle}>CLASSIFICAÇÃO GERAL</Text>
+    <View style={[styles.rankingContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <Text style={[styles.rankingTitle, { color: theme.muted }]}>CLASSIFICAÇÃO GERAL</Text>
       {runnersUp.map((p, index) => (
         <View key={p.id} style={styles.rankRow}>
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankBadgeText}>{index + 2}°</Text>
+          <View style={[styles.rankBadge, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <Text style={[styles.rankBadgeText, { color: theme.text }]}>{index + 2}°</Text>
           </View>
           {p.photoUri ? (
-            <Image source={{ uri: p.photoUri }} style={styles.rankAvatar} />
+            <Image source={{ uri: p.photoUri }} style={[styles.rankAvatar, { borderColor: theme.border }]} />
           ) : (
-            <View style={styles.rankAvatarPlaceholder}>
-              <Text style={styles.rankAvatarPlaceholderText}>{p.name.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.rankAvatarPlaceholder, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Text style={[styles.rankAvatarPlaceholderText, { color: theme.text }]}>{p.name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
-          <Text style={styles.rankName} numberOfLines={1}>
+          <Text style={[styles.rankName, { color: theme.text }]} numberOfLines={1}>
             {p.name}
           </Text>
-          <Text style={styles.rankPoints}>
+          <Text style={[styles.rankPoints, { color: theme.text }]}>
             {p.points} pts
           </Text>
         </View>
@@ -98,15 +106,15 @@ export default function ResultsScreen() {
       </BrutalButton>
       <BrutalButton variant="surface" style={{ marginTop: 12 }} onPress={handleExit}>
         <View style={styles.buttonRow}>
-          <Home size={20} color={Colors.text} strokeWidth={2.5} style={{ marginRight: 8 }} />
-          <Text style={styles.buttonTextDark}>Menu Principal</Text>
+          <Home size={20} color={theme.text} strokeWidth={2.5} style={{ marginRight: 8 }} />
+          <Text style={[styles.buttonTextDark, { color: theme.text }]}>Menu Principal</Text>
         </View>
       </BrutalButton>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {isTabletLandscape ? (
         // ── TABLET LANDSCAPE: two-column layout ─────────────────────────────
         <View style={styles.tabletWrapper}>
@@ -123,7 +131,7 @@ export default function ResultsScreen() {
         </View>
       ) : (
         // ── PORTRAIT: original layout ────────────────────────────────────────
-        <View style={styles.inner}>
+        <View style={[styles.inner, isTablet && styles.innerTabletPortrait]}>
           <BrutalHeader title="Partida Finalizada!" showBack={false} />
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
             {winnerCard}
@@ -139,7 +147,6 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   inner: {
     flex: 1,
@@ -162,15 +169,12 @@ const styles = StyleSheet.create({
     left: 8,
     right: -8,
     bottom: -8,
-    backgroundColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     zIndex: 1,
   },
   winnerCardFront: {
     zIndex: 2,
-    backgroundColor: Colors.warning,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 24,
     alignItems: 'center',
@@ -183,19 +187,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: Colors.border,
     marginBottom: 16,
   },
   winnerTextSmall: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.border,
     letterSpacing: 1,
   },
   winnerName: {
     fontFamily: Fonts.heading,
     fontSize: 36,
-    color: Colors.text,
     marginTop: 4,
     textAlign: 'center',
   },
@@ -203,7 +204,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
-    borderColor: Colors.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -211,19 +211,15 @@ const styles = StyleSheet.create({
   winnerBadgeText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 16,
-    color: Colors.border,
   },
   rankingContainer: {
-    backgroundColor: Colors.surface,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     borderRadius: Metrics.radiusCard,
     padding: 20,
   },
   rankingTitle: {
     fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    color: Colors.muted,
     letterSpacing: 1.2,
     marginBottom: 16,
   },
@@ -238,9 +234,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -248,18 +242,15 @@ const styles = StyleSheet.create({
   rankBadgeText: {
     fontFamily: Fonts.bodyBold,
     fontSize: 12,
-    color: Colors.border,
   },
   rankName: {
     flex: 1,
     fontFamily: Fonts.bodyBold,
     fontSize: 16,
-    color: Colors.text,
   },
   rankPoints: {
     fontFamily: Fonts.body,
     fontSize: 16,
-    color: Colors.text,
   },
   footer: {
     marginTop: 12,
@@ -276,7 +267,6 @@ const styles = StyleSheet.create({
   },
   buttonTextDark: {
     fontFamily: Fonts.subheading,
-    color: Colors.text,
     fontSize: 18,
   },
   // ── Tablet Landscape ─────────────────────────────────────────────────────
@@ -304,7 +294,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: Metrics.radiusCard,
     borderWidth: Metrics.borderWidth,
-    borderColor: Colors.border,
     backgroundColor: '#FFFFFF',
     marginBottom: 16,
     overflow: 'visible',
@@ -318,14 +307,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: Metrics.radiusCard - 3,
-    backgroundColor: '#FEFCE8',
     justifyContent: 'center',
     alignItems: 'center',
   },
   winnerPhotoPlaceholderText: {
     fontFamily: Fonts.heading,
     fontSize: 48,
-    color: Colors.text,
   },
   miniTrophyBadge: {
     position: 'absolute',
@@ -336,7 +323,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 2.5,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 5,
@@ -346,16 +332,13 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: Colors.border,
     marginRight: 10,
   },
   rankAvatarPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: Colors.background,
     borderWidth: 2,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -363,6 +346,10 @@ const styles = StyleSheet.create({
   rankAvatarPlaceholderText: {
     fontSize: 14,
     fontFamily: Fonts.heading,
-    color: Colors.text,
+  },
+  innerTabletPortrait: {
+    maxWidth: 680,
+    alignSelf: 'center',
+    width: '100%',
   },
 });
