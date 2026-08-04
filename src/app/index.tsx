@@ -128,7 +128,7 @@ export default function HomeScreen() {
       const templateId = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
       const publicKey = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
 
-      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,28 +142,23 @@ export default function HomeScreen() {
             feedback: sanitizedFeedback,
           },
         }),
-      })
-        .then((response) => {
-          if (response.ok) {
-            setWarn('Obrigado pelo seu feedback! Ele é muito importante para mim.');
-            setFeedbackVisible(false);
-            setFeedbackName('');
-            setFeedbackComment('');
-          } else {
-            setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
-          }
-        })
-        .catch((error) => {
-          console.error('Erro ao enviar feedback:', error);
-          setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
-        });
+      });
+
+      if (response.ok) {
+        setWarn('Obrigado pelo seu feedback! Ele é muito importante para mim.');
+        setFeedbackVisible(false);
+        setFeedbackName('');
+        setFeedbackComment('');
+      } else {
+        setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+      }
     } catch (error) {
       console.error('Erro ao enviar feedback:', error);
       setWarn('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
     }
   };
 
-  const sortSubtittle = () => {
+  const randomSubtitle = React.useMemo(() => {
     const subtittles = [
       'Um pouco de comunhão prática!',
       'Vivendo com seu irmão em Cristo.',
@@ -192,9 +187,9 @@ export default function HomeScreen() {
       'Mandamento: Seja grato!',
     ];
     return subtittles[Math.floor(Math.random() * subtittles.length)];
-  };
+  }, []);
 
-  const sortRotation = () => {
+  const randomRotation = React.useMemo(() => {
     const rotations = [
       '-6deg',
       '-5deg',
@@ -210,7 +205,7 @@ export default function HomeScreen() {
       '6deg',
     ];
     return rotations[Math.floor(Math.random() * rotations.length)];
-  };
+  }, []);
 
   const gameButtons = (
     <View style={[styles.mainActions, isTabletLandscape && styles.mainActionsTablet]}>
@@ -290,7 +285,7 @@ export default function HomeScreen() {
         variant="secondary"
         fullWidth={true}
         onPress={() => {
-          router.push('/torre-config' as any);
+          router.push('/torre-config');
         }}
       >
         <View style={styles.soloButtonRow}>
@@ -443,7 +438,7 @@ export default function HomeScreen() {
               <Text style={[styles.logoTextTop, styles.logoTextTablet]}>RESPONDE,</Text>
               <Text style={[styles.logoTextBottom, styles.logoTextTablet]}>IRMÃO!</Text>
             </View>
-            <Text style={[styles.subtittle, { transform: [{ rotate: sortRotation() }] }]}>{sortSubtittle()}</Text>
+            <Text style={[styles.subtitle, { color: theme.text }]}>{randomSubtitle}</Text>
             {secondaryButtons}
           </View>
 
@@ -461,7 +456,7 @@ export default function HomeScreen() {
             <Text style={styles.logoTextBottom}>IRMÃO!</Text>
           </View>
 
-          <Text style={[styles.subtittle, { transform: [{ rotate: sortRotation() }] }]}>{sortSubtittle()}</Text>
+          <Text style={[styles.subtittle, { transform: [{ rotate: randomRotation }] }]}>{randomSubtitle}</Text>
 
           {gameButtons}
           {secondaryButtons}

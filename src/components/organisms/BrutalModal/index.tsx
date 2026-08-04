@@ -23,7 +23,7 @@ export const BrutalModal: React.FC<BrutalModalProps> = ({
   const { isTablet } = useTabletLandscape();
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   useEffect(() => {
     if (visible) {

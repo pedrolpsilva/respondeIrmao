@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 import * as Application from 'expo-application';
 import { Mail } from 'lucide-react-native';
 import React from 'react';
-import { Linking, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function AboutScreen() {
   const theme = useTheme();
@@ -15,6 +15,7 @@ export default function AboutScreen() {
       await Linking.openURL('mailto:PEDRO.LPO.OFICIAL@GMAIL.COM');
     } catch (error) {
       console.error('Erro ao abrir aplicativo de e-mail:', error);
+      Alert.alert('Erro', 'Não foi possível abrir o aplicativo de e-mail.');
     }
   };
   const { isTablet, isTabletLandscape } = useTabletLandscape();

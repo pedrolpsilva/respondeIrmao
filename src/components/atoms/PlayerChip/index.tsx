@@ -22,7 +22,7 @@ export const PlayerChip: React.FC<PlayerChipProps> = ({
 }) => {
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   const handleRemove = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -54,6 +54,8 @@ export const PlayerChip: React.FC<PlayerChipProps> = ({
         <Pressable
           onPress={handleRemove}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={`Remover jogador ${name}`}
           style={({ pressed }) => [
             styles.removeButton,
             { backgroundColor: theme.accent2, borderColor: theme.border },

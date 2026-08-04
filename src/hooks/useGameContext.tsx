@@ -1,41 +1,17 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
 import { TorreLevel } from '@/constants/torreTypes';
-import { questionsService } from '@/services/questionsService';
-import * as Crypto from 'expo-crypto';
-import * as FileSystem from 'expo-file-system/legacy';
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect } from 'react';
+import { useConfigStore, GameMode, GameConfig, WhoAmIConfig } from '../stores/useConfigStore';
+import { usePlayersStore, Player } from '../stores/usePlayersStore';
+import { useQuestionsStore } from '../stores/useQuestionsStore';
 
-export type GameMode = 'quiz' | 'compartilhar' | 'torre' | 'teologico' | 'quem-sou-eu';
-
-export interface Player {
-  id: string;
-  name: string;
-  points: number;
-  playedIds?: string[];
-  photoUri?: string;
-}
-
-export interface GameConfig {
-  level: string; // 'multidao' | 'discipulo' | 'apostolo' | 'comunhao' | 'testemunho' | 'confissao' | 'teologico'
-  targetPoints: number; // 10, 15, 20
-  timerBase: number; // seconds: 30, 60, 90, 120
-  repeatSamePlayer: boolean;
-  repeatOtherPlayers: boolean;
-  includeLowerLevels: boolean;
-}
-
-export interface WhoAmIConfig {
-  targetPoints: number;    // 20, 30, 40
-  timerEnabled: boolean;
-  timerBase: number;       // 30, 40, 50, 60, 70, 80, 90 seconds
-  selectedCategories: string[]; // [] means all
-}
+export { GameMode, Player, GameConfig, WhoAmIConfig };
 
 interface GameContextType {
   gameMode: GameMode;
   setGameMode: (mode: GameMode) => void;
   players: Player[];
-  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  setPlayers: (players: Player[] | ((prev: Player[]) => Player[])) => void;
   config: GameConfig;
   updateConfig: (updates: Partial<GameConfig>) => void;
   whoAmIConfig: WhoAmIConfig;
@@ -43,7 +19,7 @@ interface GameContextType {
   currentPlayerIndex: number;
   setCurrentPlayerIndex: (index: number) => void;
   playedQuestionIds: string[];
-  setPlayedQuestionIds: React.Dispatch<React.SetStateAction<string[]>>;
+  setPlayedQuestionIds: (ids: string[] | ((prev: string[]) => string[])) => void;
   quizQuestions: Record<string, Question[]>;
   compartilharQuestions: Record<string, Question[]>;
   torreQuestions: Question[];
@@ -54,7 +30,6 @@ interface GameContextType {
   torreSelectedLevel: TorreLevel;
   setTorreSelectedLevel: (level: TorreLevel) => void;
 
-  // Helpers to manage state transitions
   resetGame: () => void;
   addPlayer: (name: string, photoUri?: string) => boolean;
   removePlayer: (id: string) => void;
@@ -64,193 +39,53 @@ interface GameContextType {
   syncQuestions: (onStepUpdate?: (stepKey: string, status: 'loading' | 'success' | 'error') => void) => Promise<void>;
 }
 
-const defaultGameConfig: GameConfig = {
-  level: 'multidao',
-  targetPoints: 10,
-  timerBase: 30,
-  repeatSamePlayer: false,
-  repeatOtherPlayers: false,
-  includeLowerLevels: false,
-};
-
-const defaultWhoAmIConfig: WhoAmIConfig = {
-  targetPoints: 20,
-  timerEnabled: false,
-  timerBase: 30,
-  selectedCategories: [],
-};
-
-const GameContext = createContext<GameContextType | undefined>(undefined);
-
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  const [gameMode, setGameMode] = useState<GameMode>('compartilhar');
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [config, setConfig] = useState<GameConfig>(defaultGameConfig);
-  const [whoAmIConfig, setWhoAmIConfig] = useState<WhoAmIConfig>(defaultWhoAmIConfig);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
-  const [playedQuestionIds, setPlayedQuestionIds] = useState<string[]>([]);
-  const [quizQuestions, setQuizQuestions] = useState<Record<string, Question[]>>(QUIZ_QUESTIONS);
-  const [compartilharQuestions, setCompartilharQuestions] = useState<Record<string, Question[]>>(COMPARTILHAR_QUESTIONS);
-  const [torreQuestions, setTorreQuestions] = useState<Question[]>(TORRE_QUESTIONS);
-  const [teologicoQuestions, setTeologicoQuestions] = useState<Question[]>(TEOLOGICO_QUESTIONS);
-  const [whoAmICards, setWhoAmICards] = useState<WhoAmICard[]>(WHO_AM_I_CARDS);
-  const [randomNames, setRandomNames] = useState<string[]>([]);
-  const [isSyncingQuestions, setIsSyncingQuestions] = useState<boolean>(false);
-  const [torreSelectedLevel, setTorreSelectedLevel] = useState<TorreLevel>('muito_facil');
-
+  const initializeQuestions = useQuestionsStore(state => state.initializeQuestions);
+  
   useEffect(() => {
-    const initializeAndSync = async () => {
-      // 1. Immediate load of local cache
-      const local = await questionsService.loadLocalQuestions();
-      setQuizQuestions(local.quiz);
-      setCompartilharQuestions(local.compartilhar);
-      setTorreQuestions(local.torre);
-      setTeologicoQuestions(local.teologico);
-      if (local.whoAmI.length > 0) setWhoAmICards(local.whoAmI);
-      if (local.names.length > 0) setRandomNames(local.names);
-
-      // 2. Try fetching from Sheets in background
-      setIsSyncingQuestions(true);
-      try {
-        const updated = await questionsService.fetchAndSyncQuestions();
-        setQuizQuestions(updated.quiz);
-        setCompartilharQuestions(updated.compartilhar);
-        setTorreQuestions(updated.torre);
-        setTeologicoQuestions(updated.teologico);
-        if (updated.whoAmI.length > 0) setWhoAmICards(updated.whoAmI);
-        if (updated.names.length > 0) setRandomNames(updated.names);
-        // console.log('[GameProvider] Synced latest questions successfully.');
-      } catch (err) {
-        // console.log('[GameProvider] Cloud sync not updated:', (err as Error).message);
-      } finally {
-        setIsSyncingQuestions(false);
-      }
-    };
-
-    initializeAndSync();
+    initializeQuestions();
   }, []);
 
-  const updateConfig = (updates: Partial<GameConfig>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
-  };
-
-  const updateWhoAmIConfig = (updates: Partial<WhoAmIConfig>) => {
-    setWhoAmIConfig(prev => ({ ...prev, ...updates }));
-  };
-
-  const resetGame = () => {
-    setPlayers(prev => prev.map(p => ({ ...p, points: 0, playedIds: [] })));
-    setCurrentPlayerIndex(0);
-    setPlayedQuestionIds([]);
-  };
-
-  const addPlayer = (name: string, photoUri?: string): boolean => {
-    const normalized = name.trim();
-    if (!normalized) return false;
-    if (players.some(p => p.name.toLowerCase() === normalized.toLowerCase())) return false;
-
-    const newPlayer: Player = {
-      id: Crypto.randomUUID(),
-      name: normalized,
-      points: 0,
-      photoUri,
-    };
-
-    setPlayers(prev => [...prev, newPlayer]);
-    return true;
-  };
-
-  const removePlayer = (id: string) => {
-    const player = players.find(p => p.id === id);
-    if (player && player.photoUri) {
-      FileSystem.deleteAsync(player.photoUri, { idempotent: true }).catch(err => {
-        console.warn('Failed to delete player photo:', err);
-      });
-    }
-    setPlayers(prev => prev.filter(p => p.id !== id));
-  };
-
-  const handleAnswer = (isCorrect: boolean) => {
-    if (!isCorrect) return; // "quando apertar em Errou não altere a pontuação"
-
-    setPlayers(prev =>
-      prev.map((player, index) =>
-        index === currentPlayerIndex
-          ? { ...player, points: player.points + 1 }
-          : player
-      )
-    );
-  };
-
-  // Quem Sou Eu?: award variable points (at least 1) to current player
-  const handleWhoAmIAnswer = (points: number) => {
-    const awarded = Math.max(1, points);
-    setPlayers(prev =>
-      prev.map((player, index) =>
-        index === currentPlayerIndex
-          ? { ...player, points: player.points + awarded }
-          : player
-      )
-    );
-  };
-
-  const nextTurn = () => {
-    if (players.length === 0) return;
-    setCurrentPlayerIndex(prev => (prev + 1) % players.length);
-  };
-
-  const syncQuestions = async (onStepUpdate?: (stepKey: string, status: 'loading' | 'success' | 'error') => void) => {
-    const updated = await questionsService.fetchAndSyncQuestions(onStepUpdate);
-    setQuizQuestions(updated.quiz);
-    setCompartilharQuestions(updated.compartilhar);
-    setTorreQuestions(updated.torre);
-    setTeologicoQuestions(updated.teologico);
-    if (updated.whoAmI.length > 0) setWhoAmICards(updated.whoAmI);
-    if (updated.names.length > 0) setRandomNames(updated.names);
-  };
-
-  return (
-    <GameContext.Provider
-      value={{
-        gameMode,
-        setGameMode,
-        players,
-        setPlayers,
-        config,
-        updateConfig,
-        whoAmIConfig,
-        updateWhoAmIConfig,
-        currentPlayerIndex,
-        setCurrentPlayerIndex,
-        playedQuestionIds,
-        setPlayedQuestionIds,
-        quizQuestions,
-        compartilharQuestions,
-        torreQuestions,
-        teologicoQuestions,
-        whoAmICards,
-        isSyncingQuestions,
-        randomNames,
-        torreSelectedLevel,
-        setTorreSelectedLevel,
-        resetGame,
-        addPlayer,
-        removePlayer,
-        handleAnswer,
-        handleWhoAmIAnswer,
-        nextTurn,
-        syncQuestions,
-      }}
-    >
-      {children}
-    </GameContext.Provider>
-  );
+  return <>{children}</>;
 };
 
-export const useGame = () => {
-  const context = useContext(GameContext);
-  if (!context) {
-    throw new Error('useGame must be used within a GameProvider');
-  }
-  return context;
+export const useGame = (): GameContextType => {
+  const configState = useConfigStore();
+  const playersState = usePlayersStore();
+  const questionsState = useQuestionsStore();
+
+  return {
+    gameMode: configState.gameMode,
+    setGameMode: configState.setGameMode,
+    players: playersState.players,
+    setPlayers: playersState.setPlayers,
+    config: configState.config,
+    updateConfig: configState.updateConfig,
+    whoAmIConfig: configState.whoAmIConfig,
+    updateWhoAmIConfig: configState.updateWhoAmIConfig,
+    currentPlayerIndex: playersState.currentPlayerIndex,
+    setCurrentPlayerIndex: playersState.setCurrentPlayerIndex,
+    playedQuestionIds: questionsState.playedQuestionIds,
+    setPlayedQuestionIds: questionsState.setPlayedQuestionIds,
+    quizQuestions: questionsState.quizQuestions,
+    compartilharQuestions: questionsState.compartilharQuestions,
+    torreQuestions: questionsState.torreQuestions,
+    teologicoQuestions: questionsState.teologicoQuestions,
+    whoAmICards: questionsState.whoAmICards,
+    isSyncingQuestions: questionsState.isSyncingQuestions,
+    randomNames: questionsState.randomNames,
+    torreSelectedLevel: configState.torreSelectedLevel,
+    setTorreSelectedLevel: configState.setTorreSelectedLevel,
+
+    resetGame: () => {
+      playersState.resetPlayers();
+      questionsState.setPlayedQuestionIds([]);
+    },
+    addPlayer: playersState.addPlayer,
+    removePlayer: playersState.removePlayer,
+    handleAnswer: playersState.handleAnswer,
+    handleWhoAmIAnswer: playersState.handleWhoAmIAnswer,
+    nextTurn: playersState.nextTurn,
+    syncQuestions: questionsState.syncQuestions,
+  };
 };

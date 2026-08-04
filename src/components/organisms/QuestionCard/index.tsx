@@ -34,7 +34,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const flipAnim = useRef(new Animated.Value(0)).current;
 
-  const styles = createStyles(isTablet, isTabletLandscape);
+  const styles = React.useMemo(() => createStyles(isTablet, isTabletLandscape), [isTablet, isTabletLandscape]);
 
   const questionText = timeUp ? 'Tempo Esgotado!' : showAnswer ? question.correctAnswer : question.text;
 
@@ -46,6 +46,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
   const [displayedText, setDisplayedText] = useState(questionText || '');
   const [displayedLevel, setDisplayedLevel] = useState(getInitialLevelLabel());
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const rawLevel = question.level || levelLabel || 'multidao';
@@ -60,6 +68,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         duration: 200,
         useNativeDriver: true,
       }).start(() => {
+        if (!isMounted.current) return;
         setDisplayedText(questionText || '');
         setDisplayedLevel(currentLevelLabel);
         slideAnim.setValue(Dimensions.get('window').width);
@@ -76,6 +85,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         duration: 250,
         useNativeDriver: true,
       }).start(() => {
+        if (!isMounted.current) return;
         setDisplayedText(questionText || '');
         setDisplayedLevel(currentLevelLabel);
         Animated.timing(flipAnim, {
@@ -88,16 +98,17 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       setDisplayedText(questionText || '');
       setDisplayedLevel(currentLevelLabel);
     }
-  }, [questionText, question.level, levelLabel, showAnswer, actionTrigger]);
+  }, [questionText, question.level, levelLabel, showAnswer, actionTrigger, displayedText, displayedLevel]);
 
-  const cardInterpolate = flipAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '180deg'],
-  });
-
-  const animatedStyle = {
-    transform: [{ translateX: slideAnim }, { rotateY: cardInterpolate }],
-  };
+  const animatedStyle = React.useMemo(() => {
+    const cardInterpolate = flipAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '180deg'],
+    });
+    return {
+      transform: [{ translateX: slideAnim }, { rotateY: cardInterpolate }],
+    };
+  }, [flipAnim, slideAnim]);
 
   return (
     <View style={[styles.cardContainer, containerStyle]}>

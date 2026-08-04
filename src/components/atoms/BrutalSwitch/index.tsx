@@ -13,7 +13,7 @@ export const BrutalSwitch: React.FC<BrutalSwitchProps> = ({
 }) => {
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   const handlePress = () => {
     if (disabled) return;

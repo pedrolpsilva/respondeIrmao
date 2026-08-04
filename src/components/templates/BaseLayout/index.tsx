@@ -13,7 +13,7 @@ export const BaseLayout: React.FC<BaseLayoutProps> = ({
 }) => {
   const theme = useTheme();
   const { isTablet, isTabletLandscape } = useTabletLandscape();
-  const styles = createStyles(isTablet, isTabletLandscape);
+  const styles = React.useMemo(() => createStyles(isTablet, isTabletLandscape), [isTablet, isTabletLandscape]);
 
   return (
     <View style={[styles.wrapper, { backgroundColor: theme.background }, style]}>

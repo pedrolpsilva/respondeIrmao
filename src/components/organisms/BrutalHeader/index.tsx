@@ -22,7 +22,7 @@ export const BrutalHeader: React.FC<BrutalHeaderProps> = ({
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
   const { showAlert } = useModal();
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   const customBackHandler = onBack || onBackPress;
 

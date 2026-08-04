@@ -171,7 +171,7 @@ export default function PlayersScreen() {
     }
   };
 
-  const chipsContent = (
+  const chipsContent = useMemo(() => (
     <>
       {players.length === 0 ? (
         <View style={styles.emptyState}>
@@ -198,7 +198,7 @@ export default function PlayersScreen() {
         </ScrollView>
       )}
     </>
-  );
+  ), [players, theme, removePlayer]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>

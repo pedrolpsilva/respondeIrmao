@@ -167,21 +167,28 @@ export default function GameScreen() {
         useNativeDriver: false,
       }).start();
 
+      const startTime = Date.now();
+      const initialTime = config.timerBase;
+
       timerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const nextTime = Math.max(0, initialTime - elapsed);
+
         setTimeRemaining((prev) => {
-          if (prev == 11) {
-            if (soundEnabledRef.current) handleCurrentSound()
+          if (prev === nextTime) return prev;
+          
+          if (nextTime === 10 && prev > 10) {
+            if (soundEnabledRef.current) handleCurrentSound();
           }
-          if (prev <= 1) {
+          if (nextTime <= 0 && prev > 0) {
             clearInterval(timerIntervalRef.current!);
             setIsTimeUp(true);
-
             if (soundEnabledRef.current) playSoundPreset('timeOut');
             return 0;
           }
-          return prev - 1;
+          return nextTime;
         });
-      }, 1000);
+      }, 500);
     }
   };
 
@@ -198,21 +205,28 @@ export default function GameScreen() {
         useNativeDriver: false,
       }).start();
 
+      const startTime = Date.now();
+      const initialTime = timeRemaining;
+
       timerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const nextTime = Math.max(0, initialTime - elapsed);
+
         setTimeRemaining((prev) => {
-          if (prev == 11) {
-            if (soundEnabledRef.current) handleCurrentSound()
+          if (prev === nextTime) return prev;
+          
+          if (nextTime === 10 && prev > 10) {
+            if (soundEnabledRef.current) handleCurrentSound();
           }
-          if (prev <= 1) {
+          if (nextTime <= 0 && prev > 0) {
             clearInterval(timerIntervalRef.current!);
             setIsTimeUp(true);
-
             if (soundEnabledRef.current) playSoundPreset('timeOut');
             return 0;
           }
-          return prev - 1;
+          return nextTime;
         });
-      }, 1000);
+      }, 500);
     } else {
       // Pause timer
       setIsTimerPaused(true);
@@ -226,9 +240,12 @@ export default function GameScreen() {
     resetTimer();
   }, [currentPlayerIndex]);
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       stopAllSounds();
     };
   }, []);
@@ -259,7 +276,7 @@ export default function GameScreen() {
 
     if (gameMode === 'quiz' || gameMode === 'teologico') {
       handleAnswer(true);
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         const isFinished = checkWinCondition();
         if (!isFinished) {
           setAnimTrigger('slide');

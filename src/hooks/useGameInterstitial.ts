@@ -29,20 +29,41 @@ export function useGameInterstitial() {
   useEffect(() => {
     if (isProMode) return;
 
+    let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
     console.log(`${LOG_TAG} Criando instância do anúncio — unitId: ${AD_UNIT_ID}`);
     const ad = InterstitialAd.createForAdRequest(AD_UNIT_ID, {
       requestNonPersonalizedAdsOnly: false,
     });
     interstitialRef.current = ad;
 
+    const loadAd = () => {
+      if (!isMounted) return;
+      console.log(`${LOG_TAG} 📡 Iniciando carregamento do anúncio...`);
+      ad.load();
+    };
+
     const unsubscribeLoaded = ad.addAdEventListener(AdEventType.LOADED, () => {
       console.log(`${LOG_TAG} ✅ Anúncio carregado e pronto para exibição`);
+      retryCount = 0;
       setAdLoaded(true);
     });
 
     const unsubscribeError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
       console.warn(`${LOG_TAG} ❌ Erro ao carregar anúncio:`, error.message);
       setAdLoaded(false);
+      
+      if (retryCount < maxRetries && isMounted) {
+        retryCount++;
+        const delay = Math.pow(2, retryCount) * 1000;
+        console.log(`${LOG_TAG} ⏳ Tentando recarregar em ${delay}ms... (Tentativa ${retryCount})`);
+        retryTimeout = setTimeout(() => {
+          loadAd();
+        }, delay);
+      }
     });
 
     const unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
@@ -57,18 +78,22 @@ export function useGameInterstitial() {
       }
 
       // Pré-carrega o próximo para a próxima partida
-      console.log(`${LOG_TAG} 🔄 Pré-carregando próximo anúncio`);
-      ad.load();
+      if (isMounted) {
+        console.log(`${LOG_TAG} 🔄 Pré-carregando próximo anúncio`);
+        retryCount = 0;
+        loadAd();
+      }
     });
 
     const unsubscribeOpened = ad.addAdEventListener(AdEventType.OPENED, () => {
       console.log(`${LOG_TAG} 👁️  Anúncio aberto / sendo exibido`);
     });
 
-    console.log(`${LOG_TAG} 📡 Iniciando carregamento do anúncio...`);
-    ad.load();
+    loadAd();
 
     return () => {
+      isMounted = false;
+      if (retryTimeout) clearTimeout(retryTimeout);
       console.log(`${LOG_TAG} 🧹 Removendo listeners`);
       unsubscribeLoaded();
       unsubscribeError();

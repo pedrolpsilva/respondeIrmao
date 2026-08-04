@@ -88,6 +88,9 @@ export default function SettingsScreen() {
       const templateId = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
       const publicKey = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
         method: 'POST',
         headers: {
@@ -102,7 +105,10 @@ export default function SettingsScreen() {
             feedback: sanitizedFeedback,
           },
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         setWarnModal('Obrigado pelo seu feedback! Ele é muito importante para mim.');
@@ -112,9 +118,13 @@ export default function SettingsScreen() {
       } else {
         setWarnModal('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao enviar feedback:', error);
-      setWarnModal('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+      if (error.name === 'AbortError') {
+        setWarnModal('Tempo esgotado. Verifique sua conexão e tente novamente.');
+      } else {
+        setWarnModal('Ocorreu um erro ao enviar. Tente novamente mais tarde.');
+      }
     }
   };
 

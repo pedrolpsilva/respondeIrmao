@@ -85,7 +85,7 @@ export default function QuemSouEuConfigScreen() {
       targetPoints: targetScore,
       timerEnabled,
       timerBase: timer,
-      selectedCategories: selectedCategories.length === allCategories.length ? [] : selectedCategories,
+      selectedCategories: selectedCategories.length === 0 ? allCategories : selectedCategories,
     });
     resetGame();
     router.push('/quem-sou-eu-game');

@@ -23,7 +23,7 @@ export const BrutalCameraModal: React.FC<BrutalCameraModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const cameraRef = useRef<any>(null);
 
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   if (!visible) return null;
 

@@ -12,106 +12,7 @@ const STORAGE_KEY_NAMES = '@respondeirmao:random_names';
 const SPREADSHEET_PUBHTML_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pubhtml';
 const SPREADSHEET_CSV_BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTNUtmrVIX691QEwOmo9dhR22Q-S93ugZJSEvFTHNVozU2_Dp8-cl2wu0iZDGLXhH_Om6CVvBIFA6U5/pub';
 
-interface SheetItem {
-  name: string;
-  gid: string;
-}
 
-/**
- * Robust CSV parser that handles multiple columns, quoted values, and multi-line strings.
- * Returns an array of rows, where each row is an array of strings (columns).
- */
-export function parseCsvRows(csvText: string): string[][] {
-  const rows: string[][] = [];
-  let currentCell = '';
-  let currentRow: string[] = [];
-  let inQuotes = false;
-
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        // Escaped double quote inside quote marks
-        currentCell += '"';
-        i++; // Skip next quote
-      } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      // End of cell
-      currentRow.push(currentCell.trim());
-      currentCell = '';
-    } else if ((char === '\r' || char === '\n') && !inQuotes) {
-      // Real end of line
-      currentRow.push(currentCell.trim());
-
-      // Only push non-empty rows
-      if (currentRow.some(cell => cell.length > 0)) {
-        rows.push(currentRow);
-      }
-
-      currentRow = [];
-      currentCell = '';
-
-      if (char === '\r' && nextChar === '\n') {
-        i++; // Skip trailing LF for CRLF line endings
-      }
-    } else {
-      currentCell += char;
-    }
-  }
-
-  // Handle residual data at EOF
-  if (currentCell || currentRow.length > 0) {
-    currentRow.push(currentCell.trim());
-    if (currentRow.some(cell => cell.length > 0)) {
-      rows.push(currentRow);
-    }
-  }
-
-  return rows;
-}
-
-
-/**
- * Normalizes a sheet name into our level ID keys.
- * E.g., "Compartilhamento - Comunhao" -> "comunhao"
- * E.g., "Quiz - Multidão" -> "multidao"
- */
-export function normalizeLevelKey(name: string): string {
-  return name
-    .replace(/^Compartilhamento\s*-\s*/i, '')
-    .replace(/^Quiz\s*-\s*/i, '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .trim();
-}
-
-/**
- * Extracts the array of sheets from Google's published HTML JavaScript init function.
- * Using RegExp to match `items.push({name: "NAME", ..., gid: "GID", ...})` pattern.
- */
-function extractSheetItems(html: string): SheetItem[] {
-  const items: SheetItem[] = [];
-
-  // Pattern search: items.push({name: "...", pageUrl: "...", gid: "...", ...})
-  // Or matching name and gid properties
-  const regex = /items\.push\(\s*\{\s*name:\s*"([^"]+)",[^}]*gid:\s*"([^"]+)"/gi;
-  let match;
-
-  while ((match = regex.exec(html)) !== null) {
-    items.push({
-      name: match[1],
-      gid: match[2]
-    });
-  }
-
-  return items;
-}
 
 export interface CachedQuestions {
   quiz: Record<string, Question[]>;
@@ -122,19 +23,7 @@ export interface CachedQuestions {
   names: string[];
 }
 
-function getStepKeyForSheet(sheetName: string): string | null {
-  if (sheetName === 'Nomes') return 'nomes';
-  if (sheetName === 'Quiz - Multidão') return 'quiz_multidao';
-  if (sheetName === 'Quiz - Discipulo') return 'quiz_discipulo';
-  if (sheetName === 'Quiz - Apostolo') return 'quiz_apostolo';
-  if (sheetName === 'Quiz Teologico') return 'quiz_teologico';
-  if (sheetName === 'Compartilhamento - Comunhao') return 'compartilhar_comunhao';
-  if (sheetName === 'Compartilhamento - Testemunho') return 'compartilhar_testemunho';
-  if (sheetName === 'Compartilhamento - Confissao') return 'compartilhar_confissao';
-  if (sheetName === 'Torre de Babel') return 'torre';
-  if (sheetName === 'Quem Sou Eu') return 'who_am_i';
-  return null;
-}
+
 
 export const questionsService = {
   /**
@@ -222,56 +111,56 @@ export const questionsService = {
 
         if (stepKey === 'nomes') {
           newNomes = data
-            .map((row: any) => (row.nome || '').trim())
+            .map((row: Record<string, unknown>) => (String(row.nome || '')).trim())
             .filter((name: string) => name.length > 0 && name.toLowerCase() !== 'nome' && name.toLowerCase() !== 'nomes');
         } else if (stepKey === 'quiz_teologico') {
-          newTeologico = data.map((row: any) => ({
+          newTeologico = data.map((row: Record<string, unknown>) => ({
             id: `remote_teologico_${row.id}`,
-            text: row.pergunta || '',
-            correctAnswer: row.resposta || '',
+            text: String(row.pergunta || ''),
+            correctAnswer: String(row.resposta || ''),
             level: 'teologico',
           }));
         } else if (stepKey.startsWith('quiz_')) {
           const levelKey = stepKey.replace('quiz_', '');
-          newQuiz[levelKey] = data.map((row: any) => ({
+          newQuiz[levelKey] = data.map((row: Record<string, unknown>) => ({
             id: `remote_${levelKey}_${row.id}`,
-            text: row.pergunta || '',
-            correctAnswer: row.resposta || '',
+            text: String(row.pergunta || ''),
+            correctAnswer: String(row.resposta || ''),
             level: levelKey,
           }));
         } else if (stepKey.startsWith('compartilhar_')) {
           const levelKey = stepKey.replace('compartilhar_', '');
-          newCompartilhar[levelKey] = data.map((row: any) => ({
+          newCompartilhar[levelKey] = data.map((row: Record<string, unknown>) => ({
             id: `remote_${levelKey}_${row.id}`,
-            text: row.pergunta || '',
+            text: String(row.pergunta || ''),
             level: levelKey,
           }));
         } else if (stepKey === 'torre') {
-          newTorre = data.map((row: any) => {
-            const classe = row.classe || 'facil';
+          newTorre = data.map((row: Record<string, unknown>) => {
+            const classe = String(row.classe || 'facil');
             return {
               id: `remote_torre_${row.id}`,
-              text: row.pergunta || '',
-              correctAnswer: row.resposta_correta || '',
-              wrongAnswers: [row.resposta_incorreta_1 || '', row.resposta_incorreta_2 || '', row.resposta_incorreta_3 || ''].filter(Boolean),
-              bibleReference: row.referencia_biblica || '',
+              text: String(row.pergunta || ''),
+              correctAnswer: String(row.resposta_correta || ''),
+              wrongAnswers: [String(row.resposta_incorreta_1 || ''), String(row.resposta_incorreta_2 || ''), String(row.resposta_incorreta_3 || '')].filter(Boolean),
+              bibleReference: String(row.referencia_biblica || ''),
               classe: (classe === 'media' ? 'medio' : classe) as 'facil' | 'medio' | 'dificil',
               level: classe,
             };
           });
         } else if (stepKey === 'who_am_i') {
-          newWhoAmI = data.map((row: any) => {
+          newWhoAmI = data.map((row: Record<string, unknown>) => {
             const hints: string[] = [];
             for (let i = 1; i <= 20; i++) {
               const dica = row[`dica_${i}`];
-              if (dica && dica.trim().length > 0) {
-                hints.push(dica.trim());
+              if (dica && String(dica).trim().length > 0) {
+                hints.push(String(dica).trim());
               }
             }
             return {
               id: `remote_whoami_${row.id}`,
-              answer: row.palavra || '',
-              category: row.categoria || '',
+              answer: String(row.palavra || ''),
+              category: String(row.categoria || ''),
               hints,
             };
           });

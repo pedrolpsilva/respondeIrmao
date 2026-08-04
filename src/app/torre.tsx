@@ -116,6 +116,7 @@ export default function TorreScreen() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set up details for the current question
   const setupQuestion = useCallback((questions: Question[], level: number) => {
@@ -137,22 +138,32 @@ export default function TorreScreen() {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
   // Start countdown timer for timed levels
-  const startTimer = useCallback((seconds: number) => {
+  const startTimer = useCallback((duration: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimerRemaining(seconds);
+    setTimerRemaining(duration);
+
+    const startTime = Date.now();
+    const initialTime = duration;
+
     timerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const nextTime = Math.max(0, initialTime - elapsed);
+
       setTimerRemaining((prev) => {
-        if (prev === null || prev <= 1) {
+        if (prev === nextTime) return prev;
+        
+        if (nextTime <= 0) {
           if (timerRef.current) clearInterval(timerRef.current);
           return 0;
         }
-        return prev - 1;
+        return nextTime;
       });
-    }, 1000);
+    }, 500);
   }, []);
 
   const stopTimer = useCallback(() => {
@@ -170,7 +181,7 @@ export default function TorreScreen() {
         playSoundPreset('timeOut');
       }
       // Auto-trigger game over after a short delay
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setIsGameOver(true);
       }, 1500);
     }

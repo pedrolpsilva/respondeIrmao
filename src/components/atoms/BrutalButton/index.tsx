@@ -20,7 +20,7 @@ export const BrutalButton: React.FC<BrutalButtonProps> = ({
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
   const [isPressed, setIsPressed] = useState(false);
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   const getBgColor = () => {
     if (disabled) return theme.muted;
@@ -64,6 +64,9 @@ export const BrutalButton: React.FC<BrutalButtonProps> = ({
     <View style={[styles.shadowWrapper, fullWidth && styles.fullWidth, style]}>
       <View style={[styles.shadowBackground, { backgroundColor: theme.border, borderRadius: Metrics.radiusButton }]} />
       <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        accessibilityLabel={typeof children === 'string' ? children : undefined}
         onPressIn={() => !disabled && setIsPressed(true)}
         onPressOut={() => !disabled && setIsPressed(false)}
         onPress={handlePress}

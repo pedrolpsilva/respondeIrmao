@@ -18,12 +18,13 @@ export default function ResultsScreen() {
   const { players, resetGame, gameMode } = useGame();
   const { isTablet, isTabletLandscape } = useTabletLandscape();
 
-  const sortedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => b.points - a.points);
+  const { winner, runnersUp } = useMemo(() => {
+    const sorted = [...players].sort((a, b) => b.points - a.points);
+    return {
+      winner: sorted[0],
+      runnersUp: sorted.slice(1),
+    };
   }, [players]);
-
-  const winner = sortedPlayers[0];
-  const runnersUp = sortedPlayers.slice(1);
 
   const handleRestart = () => {
     resetGame();

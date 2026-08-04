@@ -13,12 +13,14 @@ export const BrutalInput: React.FC<BrutalInputProps> = ({
 }) => {
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
-  const styles = createStyles(isTablet);
+  const styles = React.useMemo(() => createStyles(isTablet), [isTablet]);
 
   return (
     <View style={[styles.shadowWrapper, containerStyle]}>
       <View style={[styles.shadowBackground, { backgroundColor: theme.border }]} />
       <TextInput
+        accessibilityLabel={props.accessibilityLabel || props.placeholder || 'Campo de texto'}
+        accessibilityRole="none"
         placeholderTextColor={theme.muted}
         style={[
           styles.inputFront,
