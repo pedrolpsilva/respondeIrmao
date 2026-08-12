@@ -1,6 +1,7 @@
 import { COMPARTILHAR_QUESTIONS, Question, QUIZ_QUESTIONS, TEOLOGICO_QUESTIONS, TORRE_QUESTIONS, WHO_AM_I_CARDS, WhoAmICard } from '@/constants/questions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from './supabaseClient';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from './firebaseClient';
 
 const STORAGE_KEY_QUIZ = '@respondeirmao:quiz_questions';
 const STORAGE_KEY_COMPARTILHAR = '@respondeirmao:compartilhar_questions';
@@ -62,7 +63,7 @@ export const questionsService = {
   },
 
   /**
-   * Connects to Supabase, downloads all matching tables and stores them safely.
+   * Connects to Firestore, downloads all matching collections and stores them safely.
    * Returns the new fully mapped question sets if successful.
    * Rejects if syncing failed, adhering to "não substitua a memória atual" policy.
    */
@@ -99,14 +100,12 @@ export const questionsService = {
     // Process all tables in parallel
     const promises = syncSteps.map(async ({ stepKey, table }) => {
       try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('*')
-          .order('id', { ascending: true });
+        const q = query(collection(db, table), orderBy('id', 'asc'));
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => doc.data());
 
-        if (error) throw error;
         if (!data || data.length === 0) {
-          throw new Error(`No data returned for table: ${table}`);
+          throw new Error(`No data returned for collection: ${table}`);
         }
 
         if (stepKey === 'nomes') {
@@ -181,7 +180,7 @@ export const questionsService = {
     await Promise.all(promises);
 
     if (!hasUpdates) {
-      throw new Error('Sync execution found no updateable question contents from Supabase.');
+      throw new Error('Sync execution found no updateable question contents from Firestore.');
     }
 
     await Promise.all([
