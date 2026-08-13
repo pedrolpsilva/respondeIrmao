@@ -13,4 +13,6 @@ export interface BrutalButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
+  analyticsEventName?: string;
+  analyticsParams?: Record<string, any>;
 }

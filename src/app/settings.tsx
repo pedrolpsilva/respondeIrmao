@@ -28,6 +28,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ColorblindType } from '@/types/settings';
 
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
+import { analyticsService } from '@/services/analyticsService';
 
 const COLORBIND_OPTIONS: { id: ColorblindType; title: string; desc: string }[] = [
   {
@@ -218,7 +219,10 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   key={opt.id}
                   activeOpacity={0.7}
-                  onPress={() => setColorblindType(opt.id)}
+                  onPress={() => {
+                    analyticsService.logButtonClick(`Colorblind Option: ${opt.title}`);
+                    setColorblindType(opt.id);
+                  }}
                   style={[
                     styles.optionRow,
                     {

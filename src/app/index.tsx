@@ -2,6 +2,7 @@ import BrutalButton from '@/components/ui/BrutalButton';
 import BrutalInput from '@/components/ui/BrutalInput';
 import BrutalModal from '@/components/ui/BrutalModal';
 import ConfigBannerAd from '@/components/ui/ConfigBannerAd';
+import { analyticsService } from '@/services/analyticsService';
 import { Colors, Fonts, Metrics, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { GameMode, useGame } from '@/hooks/useGameContext';
@@ -327,7 +328,10 @@ export default function HomeScreen() {
       <View style={styles.topRightActions}>
         <TouchableOpacity
           style={[styles.headerActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-          onPress={handleSyncSheet}
+          onPress={() => {
+            analyticsService.logButtonClick('Carregar Base de Dados');
+            handleSyncSheet();
+          }}
           activeOpacity={0.8}
           accessibilityLabel="Carregar base de dados"
         >
@@ -336,7 +340,10 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={[styles.headerActionBtn, { backgroundColor: theme.surface, borderColor: theme.border }]}
-          onPress={() => router.push('/settings')}
+          onPress={() => {
+            analyticsService.logButtonClick('Configurações');
+            router.push('/settings');
+          }}
           activeOpacity={0.8}
           accessibilityLabel="Configurações"
         >

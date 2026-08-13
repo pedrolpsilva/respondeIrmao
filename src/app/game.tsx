@@ -8,6 +8,7 @@ import { useGameInterstitial } from '@/hooks/useGameInterstitial';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { useTheme } from '@/hooks/use-theme';
 import { playSoundPreset, stopAllSounds, playClickSound } from '@/services/soundManager';
+import { analyticsService } from '@/services/analyticsService';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Check, Medal, Volume2, VolumeX, X, Play, Pause } from 'lucide-react-native';
@@ -194,6 +195,7 @@ export default function GameScreen() {
 
   const toggleTimerPause = () => {
     if (gameMode !== 'quiz' && gameMode !== 'teologico') return;
+    analyticsService.logButtonClick(isTimerPaused ? 'Retomar Timer' : 'Pausar Timer');
 
     if (isTimerPaused) {
       // Resume timer

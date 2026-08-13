@@ -2,6 +2,7 @@ import { Metrics } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { playClickSound } from '@/services/soundManager';
+import { analyticsService } from '@/services/analyticsService';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 import { createStyles } from './styles';
@@ -16,6 +17,8 @@ export const BrutalButton: React.FC<BrutalButtonProps> = ({
   style,
   textStyle,
   disabled = false,
+  analyticsEventName,
+  analyticsParams,
 }) => {
   const theme = useTheme();
   const { isTablet } = useTabletLandscape();
@@ -45,6 +48,14 @@ export const BrutalButton: React.FC<BrutalButtonProps> = ({
     if (disabled) return;
     Vibration.vibrate(10);
     playClickSound();
+
+    const labelText = analyticsEventName || (typeof children === 'string' ? children : 'button');
+    analyticsService.logButtonClick(labelText, {
+      variant,
+      size,
+      ...analyticsParams,
+    });
+
     onPress?.();
   };
 

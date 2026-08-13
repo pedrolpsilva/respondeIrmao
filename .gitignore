@@ -2,6 +2,10 @@
 
 # dependencies
 node_modules/
+.agents/
+.vscode/
+_mocks_/
+*lock.json
 
 # Expo
 .expo/
@@ -43,3 +47,7 @@ app-example
 /android
 .env
 *.lock
+google-services.json
+**/google-services.json
+GoogleService-Info.plist
+**/GoogleService-Info.plist

@@ -1,18 +1,38 @@
+const fs = require('fs');
+const path = require('path');
+
+function loadEnv() {
+  const envPath = path.resolve(__dirname, '../.env');
+  if (fs.existsSync(envPath)) {
+    const envFile = fs.readFileSync(envPath, 'utf8');
+    envFile.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...values] = trimmed.split('=');
+        if (key && values.length > 0 && !process.env[key.trim()]) {
+          process.env[key.trim()] = values.join('=').trim();
+        }
+      }
+    });
+  }
+}
+loadEnv();
+
 const { initializeApp } = require('firebase/app');
 const { getFirestore, doc, setDoc, writeBatch } = require('firebase/firestore');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyB3KxEi2_4er7lnsk5O3_NFw8tFl1LDEmE",
-  authDomain: "responde-irmao-27406.firebaseapp.com",
-  projectId: "responde-irmao-27406",
-  storageBucket: "responde-irmao-27406.firebasestorage.app",
-  messagingSenderId: "459596151804",
-  appId: "1:459596151804:web:877a1bd2fe854e33989079",
-  measurementId: "G-1D8T6N0N40"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const supabaseUrl = 'https://ywzoynxpkymllzathkdd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3em95bnhwa3ltbGx6YXRoa2RkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDU0MzAsImV4cCI6MjA5OTc4MTQzMH0.mPmvfeLOSo09Cfh6AXLyElTaqJ5rC7KDlhtXoMkxEws';
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 const tables = [
   'nomes',

@@ -2,6 +2,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useModal } from '@/hooks/useModal';
 import { useTabletLandscape } from '@/hooks/useTabletLandscape';
 import { playClickSound } from '@/services/soundManager';
+import { analyticsService } from '@/services/analyticsService';
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
@@ -29,6 +30,7 @@ export const BrutalHeader: React.FC<BrutalHeaderProps> = ({
   const handleBack = () => {
     Vibration.vibrate(10);
     playClickSound();
+    analyticsService.logButtonClick(`Header Back: ${title || 'Screen'}`);
     if (customBackHandler) {
       customBackHandler();
     } else {
@@ -64,6 +66,7 @@ export const BrutalHeader: React.FC<BrutalHeaderProps> = ({
             <Pressable
               onPress={() => {
                 playClickSound();
+                analyticsService.logButtonClick('Header Encerrar Partida');
                 showAlert({
                   title: 'Sair da Partida',
                   message: 'Deseja realmente voltar ao menu e reiniciar?',

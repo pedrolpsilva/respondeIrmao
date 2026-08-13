@@ -8,7 +8,9 @@
     "scheme": "respondeirmao",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.respondeIrmao",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +20,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.totaltrac.respondeIrmao"
+      "package": "com.totaltrac.respondeIrmao",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
